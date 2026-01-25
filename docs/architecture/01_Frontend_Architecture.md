@@ -1,5 +1,9 @@
 # 01. フロントエンド・アプリケーションアーキテクチャ
 
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md)
+> **実装フェーズ:** [Phase 1: Auth](../phases/Phase1_Infrastructure.md), [Phase 3: User Interface](../phases/Phase3_UserInterface.md), [Phase 9: SSO](../phases/Phase9_SSO.md)
+
 ## 技術スタック (Frontend)
 
 **Core Framework:**
@@ -40,12 +44,25 @@ src/
 
 ## UI/UX デザイン方針
 
-**コンセプト: "Modern & Trustworthy"**
+**コンセプト: "放置OKの安心感"**
 
-- ユーザーが「自分の手でハイクオリティなブログを管理している」と感じられるプロフェッショナルなUI。
-- **ダッシュボード:** 複雑なデータを可視化するグラフ（Recharts等）の使用。
-- **セットアップウィザード:** 3分で終わる体験を「プログレスバー」や「ステップ表示」で視覚的に演出。
-- **モバイルファースト:** 管理画面もスマートフォンで閲覧・簡易操作（ステータス確認など）ができるようにレスポンシブ対応を徹底。
+- ユーザーが「自動で資産が積み上がっている」と感じられる視覚的なフィードバック。
+- **ダッシュボード:**
+  - 最重要指標：記事数（公開/下書き）
+  - 今週の生成予定
+  - PV数（GSC連携後）
+- **セットアップウィザード:** 認知負荷を最小化した簡易入力フロー。
+- **レスポンシブ対応:**
+  - **MVP:** PC版のみ（ターゲットの開発者はPC利用が中心）
+  - **Phase 7以降:** モバイル最適化
+
+## 認証方式
+
+**Technology:** Supabase Auth（確定）
+
+- **Google OAuth:** MVP必須（認知負荷軽減）
+- **Email/Password:** オプション
+- **セッション管理:** Supabase組み込み機能
 
 ## 記事編集機能（MVP vs Future）
 

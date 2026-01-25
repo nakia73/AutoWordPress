@@ -1,14 +1,18 @@
-# Phase 8: Custom Domain（独自ドメイン接続）詳細仕様書
+# Phase 8: Custom Domain（独自ドメイン接続）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md)
+> **前のフェーズ:** [← Phase 7: Visual](./Phase7_Visual.md) | **次のフェーズ:** [Phase 9: SSO →](./Phase9_SSO.md)
 
 **テーマ:** Brand Identity
 **ゴール:** ユーザーが自分の独自ドメインでブログを運用できるようにする
-**前提:** Phase 5（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
+**前提:** Phase 6（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
 
 ---
 
 ## 1. 目的
 
-MVPでは `{slug}.productblog.com` のサブドメインを提供。
+MVPでは `{slug}.argonote.app` のサブドメインを提供。
 ブランディングを重視するユーザー向けに**独自ドメイン**での運用を可能にします。
 
 ---
@@ -34,14 +38,14 @@ MVPでは `{slug}.productblog.com` のサブドメインを提供。
 
 | タイプ | 名前 | 値 |
 |--------|------|-----|
-| CNAME | blog | {slug}.productblog.com |
+| CNAME | blog | {slug}.argonote.app |
 
 **ルートドメイン接続の場合 (example.com):**
 
 | タイプ | 名前 | 値 |
 |--------|------|-----|
 | A | @ | [VPSのIPアドレス] |
-| TXT | _productblog | verify={verification_token} |
+| TXT | _argonote | verify={verification_token} |
 
 ### 2.3 SSL自動発行
 
@@ -57,7 +61,7 @@ Let's Encrypt + Certbotで自動発行・更新
 // ドメイン検証
 async function verifyDomain(domain: string, userId: string): Promise<VerificationResult> {
   // 1. DNS TXTレコード確認
-  const txtRecords = await dns.resolveTxt(`_productblog.${domain}`);
+  const txtRecords = await dns.resolveTxt(`_argonote.${domain}`);
   const expectedToken = generateVerificationToken(userId);
 
   if (!txtRecords.some(r => r.includes(expectedToken))) {
@@ -100,23 +104,12 @@ server {
 }
 ```
 
-### 3.4 データベーススキーマ
+### 3.4 データベース
 
-```sql
--- カスタムドメイン管理
-CREATE TABLE custom_domains (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  site_id UUID REFERENCES sites(id),
-  domain VARCHAR(255) UNIQUE,
-  status VARCHAR(50) DEFAULT 'pending',  -- pending, verifying, active, error
-  ssl_status VARCHAR(50) DEFAULT 'none', -- none, issuing, active, expired
-  verification_token VARCHAR(100),
-  ssl_expires_at TIMESTAMP,
-  verified_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+本フェーズで追加するテーブル：
+- `custom_domains` - 独自ドメイン管理（検証状態、SSL状態）
+
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#独自ドメインphase-8) を参照
 
 ---
 

@@ -1,4 +1,10 @@
-# Phase 2: Core AI（AIコア機能）詳細仕様書
+# Phase 2: Core AI（AIコア機能）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
+> **前のフェーズ:** [← Phase 1: Infrastructure + Auth](./Phase1_Infrastructure.md) | **次のフェーズ:** [Phase 3: User Interface →](./Phase3_UserInterface.md)
+>
+> **実施週:** Week 2
 
 **テーマ:** Intelligent Engine
 **ゴール:** 「プロダクトURLを入力するだけで、適切なターゲットを分析し、最適なSEO記事を生成してWordPressに投稿する」という一連のコアフローを実現する。
@@ -15,8 +21,8 @@
 
 ### Step 1: プロダクト分析エンジン (Firecrawl + LLM)
 
-- Firecrawl API を使用して、ユーザーが入力したURLからサイト全体の文字情報をスクレイピング。
-- 取得した情報を Gemini 1.5 Pro または Claude 3.5 Sonnet に渡し、以下の属性を抽出。
+- **Firecrawl API**（プライマリ）/ **Jina Reader**（フォールバック）を使用して、ユーザーが入力したURLからサイト全体の文字情報をスクレイピング。
+- 取得した情報を **Claude 3.5 Sonnet**（メイン）/ **GPT-4o-mini**（フォールバック）に渡し、以下の属性を抽出。
   - **ターゲット像:** 誰がそのプロダクトを使うべきか（ペルソナ）。
   - **キーワード:** どのような検索意図でプロダクトが発見されるべきか。
   - **記事クラスター案:** サイト全体のSEO評価を上げるための関連トピック群。
@@ -60,7 +66,7 @@
 
 ```typescript
 // WordPress REST API経由で投稿
-const response = await fetch(`https://${siteSlug}.productblog.com/wp-json/wp/v2/posts`, {
+const response = await fetch(`https://${siteSlug}.argonote.app/wp-json/wp/v2/posts`, {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${wpToken}`,
@@ -80,45 +86,30 @@ const response = await fetch(`https://${siteSlug}.productblog.com/wp-json/wp/v2/
 
 | コンポーネント | 技術 |
 |---------------|------|
-| Web Scraping | Firecrawl API |
+| Web Scraping | **Firecrawl API** (primary) + Jina Reader (fallback) |
 | Semantic Search | Tavily API |
-| LLM (Default) | Gemini 1.5 Pro |
-| LLM (Backup) | Claude 3.5 Sonnet |
-| Job Queue | Redis (Upstash) + BullMQ |
-| Database | PostgreSQL (Neon) |
+| LLM (Main) | **Claude 3.5 Sonnet** (via LiteLLM) |
+| LLM (Fallback) | **GPT-4o-mini** |
+| Worker/Queue | **Inngest** (長時間処理・自動リトライ対応) |
+| Database | **Supabase (PostgreSQL)** |
 
 ---
 
-## 4. データベーススキーマ
+## 4. データベース
 
-```sql
--- 記事クラスター
-CREATE TABLE article_clusters (
-  id UUID PRIMARY KEY,
-  product_id UUID REFERENCES products(id),
-  pillar_keyword VARCHAR(255),
-  status VARCHAR(50) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT NOW()
-);
+本フェーズで使用するテーブル：
+- `products` - プロダクト情報と分析結果
+- `article_clusters` - 記事クラスター（キーワード群）
+- `articles` - 生成記事データ
+- `jobs` - 非同期ジョブ管理
 
--- 記事
-CREATE TABLE articles (
-  id UUID PRIMARY KEY,
-  cluster_id UUID REFERENCES article_clusters(id),
-  title VARCHAR(255),
-  content TEXT,
-  meta_description VARCHAR(160),
-  status VARCHAR(50) DEFAULT 'draft',
-  wp_post_id INTEGER,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#詳細スキーマ定義) を参照
 
 ---
 
 ## 5. セキュリティ & 実用性の考慮
 
-- **APIレート制限:** 同時生成リクエストをキュー（Redis）で管理し、API制限によるエラーを防ぐ。
+- **APIレート制限:** 同時生成リクエストをInngestで管理し、API制限によるエラーを防ぐ。
 - **機密保護:** スクレイピングで取得した情報を学習に利用せず、あくまで解析にのみ使用する。
 
 ---

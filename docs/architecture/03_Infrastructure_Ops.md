@@ -1,6 +1,12 @@
 # 03. インフラ・WordPress実行基盤アーキテクチャ
 
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [Multisite検討](./06_Multisite_feasibility.md)
+> **実装フェーズ:** [Phase 1: Infrastructure](../phases/Phase1_Infrastructure.md), [Phase 6: MVP Launch](../phases/Phase6_MVPLaunch.md), [Phase 8: Custom Domain](../phases/Phase8_CustomDomain.md)
+
 本サービスのコアコンピタンスである「WordPressの自動構築・運用」を担うインフラ層の設計です。
+
+**最大懸念リスク:** WordPress Multisiteの保守運用におけるトラブル（CONCEPT_DECISIONS.md I3参照）
 
 ## 実行環境 (Hosting)
 
@@ -27,6 +33,12 @@
   - MariaDB (同一サーバー)
   - Redis Object Cache（オプション）
 - **メリット:** 運用コスト最小、構成シンプル
+- **監視:**
+  - UptimeRobot（サイト稼働、1分間隔）
+  - DigitalOcean Monitoring（CPU/メモリ/ディスク）
+  - Sentry（エラー検知）
+- **バックアップ:** DigitalOcean Backups（週次自動）
+- **復旧目標:** 4時間以内（手動）
 
 ### Phase 2: Growth (100-500 Users)
 
@@ -90,10 +102,10 @@ wp site create --slug=newclient --title="New Client Blog" --email=admin@example.
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name *.productblog.com;
+    server_name *.argonote.app;
 
-    ssl_certificate /etc/letsencrypt/live/productblog.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/productblog.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/argonote.app/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/argonote.app/privkey.pem;
 
     # Security Headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -101,7 +113,7 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    root /var/www/productblog;
+    root /var/www/argonote;
     index index.php;
 
     location / {

@@ -1,8 +1,12 @@
-# Phase 9: SSO（シームレスログイン）詳細仕様書
+# Phase 9: SSO（シームレスログイン）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [フロントエンド仕様](../architecture/01_Frontend_Architecture.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
+> **前のフェーズ:** [← Phase 8: Custom Domain](./Phase8_CustomDomain.md) | **次のフェーズ:** [Phase 10: GSC Integration →](./Phase10_GSCIntegration.md)
 
 **テーマ:** Seamless Experience
 **ゴール:** ダッシュボードからWordPress管理画面へ再ログインなしで遷移できるようにする
-**前提:** Phase 5（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
+**前提:** Phase 6（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
 
 ---
 
@@ -58,7 +62,7 @@ export async function POST(req: Request) {
     used: false
   });
 
-  const wpUrl = `https://${session.user.siteSlug}.productblog.com/wp-admin`;
+  const wpUrl = `https://${session.user.siteSlug}.argonote.app/wp-admin`;
   const ssoUrl = `${wpUrl}?sso_token=${token}`;
 
   return NextResponse.json({ url: ssoUrl });
@@ -70,19 +74,19 @@ export async function POST(req: Request) {
 ```php
 <?php
 /**
- * Plugin Name: ProductBlog SSO
+ * Plugin Name: Argo Note SSO
  * Description: シームレスログイン機能
  */
 
-add_action('init', 'productblog_sso_check');
+add_action('init', 'argonote_sso_check');
 
-function productblog_sso_check() {
+function argonote_sso_check() {
     if (!isset($_GET['sso_token'])) return;
 
     $token = sanitize_text_field($_GET['sso_token']);
 
     // トークン検証API呼び出し
-    $response = wp_remote_post(PRODUCTBLOG_API_URL . '/api/sso/verify', [
+    $response = wp_remote_post(ARGONOTE_API_URL . '/api/sso/verify', [
         'body' => json_encode(['token' => $token]),
         'headers' => ['Content-Type' => 'application/json']
     ]);
@@ -103,25 +107,12 @@ function productblog_sso_check() {
 }
 ```
 
-### 3.3 データベーススキーマ
+### 3.3 データベース
 
-```sql
--- SSOトークン管理
-CREATE TABLE sso_tokens (
-  id UUID PRIMARY KEY,
-  token VARCHAR(100) UNIQUE,
-  user_id UUID REFERENCES users(id),
-  site_id UUID REFERENCES sites(id),
-  expires_at TIMESTAMP,
-  used BOOLEAN DEFAULT false,
-  used_at TIMESTAMP,
-  ip_address VARCHAR(45),
-  created_at TIMESTAMP DEFAULT NOW()
-);
+本フェーズで追加するテーブル：
+- `sso_tokens` - ワンタイムトークン管理
 
--- 古いトークンのクリーンアップ（1時間以上前）
-CREATE INDEX idx_sso_tokens_expires ON sso_tokens(expires_at);
-```
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#ssophase-9) を参照
 
 ---
 

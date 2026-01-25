@@ -1,5 +1,9 @@
 # WordPress Multisite (マルチサイト) 実装可能性調査
 
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [インフラ仕様](./03_Infrastructure_Ops.md)
+> **実装フェーズ:** [Phase 1: Infrastructure + Auth](../phases/Phase1_Infrastructure.md)
+
 **目的:**
 現在の「1クライアント = 1 Dockerコンテナ」というアーキテクチャから、より効率的で管理しやすい「WordPress Multisite」への移行の妥当性を評価し、技術的な設計を行う。
 
@@ -46,18 +50,18 @@ graph TD
 
 以前はプラグインが必要でしたが、最新のWordPressでは標準機能で**「サイトごとに異なる独自ドメイン」**を割り当て可能です（Domain Mapping）。
 
-- **Network Admin:** `network.productblog.com`
+- **Network Admin:** `network.argonote.app`
 - **Site A:** `example.com/blog/` (Reverse Proxy経由)
-  - 内部的には `site-a.productblog.com` として作成し、マッピングさせる。
+  - 内部的には `site-a.argonote.app` として作成し、マッピングさせる。
 - **Site B:** `another-client.com/news/`
 
 ### 2.3 リバースプロキシとの連携
 
 Multisiteで最も技術的な難所となるのが、「サブディレクトリ運用（`example.com/blog/`）」のリクエストを正しく処理することです。
 
-- **Client Side:** `example.com/blog/` -> `proxy_pass https://productblog-node1.com/`
+- **Client Side:** `example.com/blog/` -> `proxy_pass https://argonote-node1.com/`
 - **WP Side:**
-  - `HTTP_HOST` ヘッダーを見てサイトを判別するが、リバースプロキシ経由だと `productblog-node1.com` になってしまう可能性がある。
+  - `HTTP_HOST` ヘッダーを見てサイトを判別するが、リバースプロキシ経由だと `argonote-node1.com` になってしまう可能性がある。
   - **対策:** `X-Forwarded-Host` ヘッダーを正しく設定し、`wp-config.php` でその値を読み取ってホスト判別を行うロジックを入れる。
 
 ## 3. ロックイン回避 (Exit Strategy)

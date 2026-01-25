@@ -1,4 +1,11 @@
-# Phase 5: MVP Launch（リリース）詳細仕様書
+# Phase 6: MVP Launch（リリース）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md)
+> **前のフェーズ:** [← Phase 5: Monetization](./Phase5_Monetization.md) | **次のフェーズ:** [Phase 7: Visual →](./Phase7_Visual.md)
+>
+> **実施週:** Week 4
+> **MVP期限:** 2026年2月25日
 
 **テーマ:** Real World Validation
 **ゴール:** 最初の10社のユーザーにサービスを実際に提供し、実益を生むプロダクトであることを証明する。
@@ -27,7 +34,7 @@
 | 項目 | 確認内容 |
 |------|----------|
 | SSL証明書 | 全サブドメインでHTTPS有効 |
-| DNS解決 | `*.productblog.com`が正しく解決 |
+| DNS解決 | `*.argonote.app`が正しく解決 |
 | CDN | Cloudflareキャッシュが有効 |
 | バックアップ | 自動バックアップが稼働 |
 

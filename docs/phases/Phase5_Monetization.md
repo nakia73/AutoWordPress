@@ -1,7 +1,18 @@
-# Phase 4: Monetization（収益化）詳細仕様書
+# Phase 5: Monetization（収益化）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
+> **前のフェーズ:** [← Phase 4: Automation](./Phase4_Automation.md) | **次のフェーズ:** [Phase 6: MVP Launch →](./Phase6_MVPLaunch.md)
+>
+> **実施週:** Week 4
 
 **テーマ:** Business Sustainability
 **ゴール:** サブスクリプション決済を導入し、サービスを継続可能なビジネスとして成立させる。
+
+**価格戦略（確定）:**
+- 初期（拡散期）: **$20/月** - 利益度外視でバイラル優先
+- 成長期: **$30/月** - 収益化強化
+- 年間プラン: **$192/年**（2ヶ月分割引）
 
 ---
 
@@ -74,26 +85,13 @@ redirect(portalSession.url);
 
 ---
 
-## 3. データベーススキーマ
+## 3. データベース
 
-```sql
--- ユーザーテーブルに追加
-ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(255);
-ALTER TABLE users ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'trial';
-ALTER TABLE users ADD COLUMN subscription_id VARCHAR(255);
-ALTER TABLE users ADD COLUMN current_period_end TIMESTAMP;
+本フェーズで拡張・追加するテーブル：
+- `users` - Stripe顧客ID、サブスクリプション状態を追加
+- `billing_history` - 課金履歴
 
--- 課金履歴
-CREATE TABLE billing_history (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  stripe_invoice_id VARCHAR(255),
-  amount INTEGER,
-  currency VARCHAR(10),
-  status VARCHAR(50),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#課金決済phase-4) を参照
 
 ---
 
@@ -128,4 +126,4 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 7. 次のステップ
 
-決済機能が完成したら、**Phase 5: MVP Launch** で全要素を統合し、Betaユーザーに提供する。
+決済機能が完成したら、**Phase 6: MVP Launch** で全要素を統合し、Betaユーザーに提供する。

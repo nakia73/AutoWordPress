@@ -1,8 +1,13 @@
-# Phase 0: Mockup（マーケティング・集客）詳細仕様書
+# Phase 0: Mockup（マーケティング・需要検証）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](../architecture/00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md)
+> **次のフェーズ:** [Phase 1: Infrastructure + Auth →](./Phase1_Infrastructure.md)
+>
+> **実施週:** Week 1（Phase 1と並行）
 
 **テーマ:** Visualization & Traction
-**ゴール:** サービス開発前にSNS拡散用のデモを作り、見込み顧客（ウェイトリスト）を獲得する。
-**期間:** Week 1-2
+**ゴール:** サービス開発前にSNS拡散用のデモを作り、見込み顧客（ウェイトリスト）を獲得し、**需要を検証する**。
 
 ---
 
@@ -10,11 +15,14 @@
 
 「実際に作る」前に「欲しい人がいるか」を確認します。特に X (Twitter) や Threads で話題になるような、**「URLを入れただけで魔法のようにブログができる」瞬間を演出すること**が最大の目的です。
 
+**ビルドインパブリック / プロセスエコノミー**として需要をテストしながら開発を進めます。
+
 ## 2. 成果物
 
 ### 2.1 魔法のランディングページ (LP)
 
-- **訴求:** 「Your AI Marketing Team. Setup in 3 minutes.」
+- **訴求:** 「Your AI-Powered Blog. Fully Automated.」
+- **サブ訴求:** バイブコーディング時代の「放置OK」ブログ自動運用
 - **機能:** URL入力フォーム（見た目）と、ウェイトリスト登録（メールアドレス収集）。
 
 ### 2.2 セットアップ演出 (The "Magic" Moment)

@@ -1,5 +1,8 @@
 # 05. シーケンス図 (Sequence Diagrams)
 
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [AIパイプライン](./04_AI_Pipeline.md)
+
 本システムにおける主要なワークフローの処理シーケンスを定義します。
 
 ## 1. ユーザー登録〜プロダクト分析〜ブログ構築フロー
@@ -12,8 +15,8 @@ sequenceDiagram
     actor User
     participant NextUI as Next.js UI (Dashboard)
     participant NextAPI as Next.js API Routes (Backend)
-    participant DB as PostgreSQL (Neon)
-    participant Queue as Redis Queue (Upstash)
+    participant DB as Supabase (PostgreSQL)
+    participant Inngest as Inngest (Worker)
     participant Analyzer as AI Worker (Product Analysis)
     participant Provisioner as WP Provisioning Worker
     participant External as External APIs (Claude/Firecrawl)
@@ -23,21 +26,21 @@ sequenceDiagram
     User->>NextUI: サインアップ & プロダクトURL入力
     NextUI->>NextAPI: POST /api/products (URL, info)
     NextAPI->>DB: プロダクトレコード作成 (Status: PENDING)
-    NextAPI->>Queue: Job: ANALYZE_PRODUCT 追加
+    NextAPI->>Inngest: Job: ANALYZE_PRODUCT 追加
     NextAPI->>NextUI: 202 Accepted (Polling開始)
 
     par Async Analysis
-        Analyzer->>Queue: Job取得
+        Analyzer->>Inngest: Job取得
         Analyzer->>External: FirecrawlでURL解析
         External-->>Analyzer: 解析結果
         Analyzer->>External: Claudeでペルソナ・クラスター生成
         External-->>Analyzer: 分析結果 (JSON)
         Analyzer->>DB: ProductAnalysis保存 & Status更新
-        Analyzer->>Queue: Job: PROVISION_BLOG 追加
+        Analyzer->>Inngest: Job: PROVISION_BLOG 追加
     end
 
     par Async Provisioning
-        Provisioner->>Queue: Job取得
+        Provisioner->>Inngest: Job取得
         Provisioner->>Cloudflare: DNSレコード追加 (blog.yourapp.com)
         Provisioner->>VPS: WP-CLI実行 (wp site create)
         VPS-->>Provisioner: サイト作成完了
@@ -61,27 +64,27 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Scheduler as Cron Job (Vercel Cron)
+    participant Scheduler as Inngest Cron
     participant NextAPI as Next.js API Routes
-    participant Queue as Redis Queue
+    participant Inngest as Inngest (Worker)
     participant Writer as AI Worker (Writer)
-    participant DB as PostgreSQL
-    participant Search as Exa/Tavily API
-    participant LLM as Gemini/Claude API
-    participant ImageGen as DALL-E 3 API
-    participant UserWP as WordPress (Docker)
+    participant DB as Supabase (PostgreSQL)
+    participant Search as Tavily/Firecrawl API
+    participant LLM as Claude 3.5 Sonnet (LiteLLM)
+    participant ImageGen as Unsplash/Pexels (MVP)
+    participant UserWP as WordPress Multisite
 
     Scheduler->>NextAPI: Trigger: Generate Articles (Auth Header)
     NextAPI->>DB: 今日生成すべき記事を検索
     DB-->>NextAPI: 対象プロダクトリスト
 
     loop For Each Product
-        NextAPI->>Queue: Job: WRITE_ARTICLE (params)
+        NextAPI->>Inngest: Job: WRITE_ARTICLE (params)
     end
 
     NextAPI-->>Scheduler: 200 OK (Queued)
 
-    Writer->>Queue: Job取得
+    Writer->>Inngest: Job取得
     Writer->>DB: 記事クラスター情報取得 (Keyword, Stage)
 
     rect rgb(240, 248, 255)

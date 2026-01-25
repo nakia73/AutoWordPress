@@ -1,4 +1,10 @@
-# Phase 3: User Interface（ユーザー・インターフェース）詳細仕様書
+# Phase 3: User Interface（ユーザー・インターフェース）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [フロントエンド仕様](../architecture/01_Frontend_Architecture.md) | [シーケンス図](../architecture/05_Sequence_Diagrams.md)
+> **前のフェーズ:** [← Phase 2: Core AI](./Phase2_CoreAI.md) | **次のフェーズ:** [Phase 4: Automation →](./Phase4_Automation.md)
+>
+> **実施週:** Week 3
 
 **テーマ:** User Onboarding & Control
 **ゴール:** ユーザーがアカウントを作成し、自身のブログが作成・運用されていくプロセスを管理できるダッシュボードを提供する。
@@ -13,17 +19,18 @@ AIというブラックボックスを、ユーザーが安心してコントロ
 
 ## 2. 実装ステップ
 
-### Step 1: 認証システム (NextAuth.js)
+### Step 1: 認証統合（Supabase Auth - Phase 1で構築済み）
 
-- Email / Password によるログイン機能の実装。
-- セキュアなセッション管理と、パスワードのハッシュ化（BCrypt）。
-- サインアップ時の重複チェック、メールバリデーション。
-- パスワードリセット（メール送信）機能。
+**Note:** 認証基盤はPhase 1で構築済み。本フェーズではUIとの統合を行う。
+
+- **Google OAuth** によるワンクリックサインアップ/ログイン
+- Supabase Auth のセッション管理
+- Next.js App Routerとの統合
 
 **セキュリティ要件:**
 
-- CSRF保護
-- Rate Limiting（ブルートフォース対策）
+- CSRF保護（Supabase Auth内蔵）
+- Rate Limiting（Supabase側で設定）
 - セキュアなCookie設定（HttpOnly, Secure, SameSite）
 
 ### Step 2: 魔法のようなオンボーディング
@@ -33,7 +40,7 @@ AIというブラックボックスを、ユーザーが安心してコントロ
 
 **オンボーディングフロー:**
 
-1. アカウント作成（メール、パスワード）
+1. Googleアカウントでサインアップ（ワンクリック）
 2. プロダクトURL入力
 3. 分析中プログレス表示（「Analyzing your product...」）
 4. 完了通知 → ダッシュボードへ
@@ -62,15 +69,15 @@ AIというブラックボックスを、ユーザーが安心してコントロ
 
 ## 3. 技術スタック
 
+**詳細:** [フロントエンド仕様書](../architecture/01_Frontend_Architecture.md) を参照
+
 | コンポーネント | 技術 |
 |---------------|------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 14+ (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS |
-| UI Components | Shadcn/UI |
-| State Management | Zustand + TanStack Query |
-| Form | React Hook Form + Zod |
-| Auth | NextAuth.js |
+| Styling | Tailwind CSS + Shadcn/UI |
+| State | Zustand + TanStack Query |
+| Auth | **Supabase Auth**（Google OAuth対応）|
 
 ---
 
@@ -87,32 +94,7 @@ AIというブラックボックスを、ユーザーが安心してコントロ
 | 記事一覧 | `/dashboard/articles` | 必要 |
 | 設定 | `/dashboard/settings` | 必要 |
 
----
-
-## 5. ディレクトリ構造
-
-```
-src/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/
-│   │   ├── signup/
-│   │   └── reset-password/
-│   ├── (dashboard)/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx          # Dashboard home
-│   │   ├── articles/
-│   │   └── settings/
-│   ├── onboarding/
-│   └── api/auth/[...nextauth]/
-├── components/
-│   ├── ui/                   # Shadcn components
-│   ├── features/
-│   └── shared/
-└── lib/
-    ├── auth.ts
-    └── api.ts
-```
+**ディレクトリ構造:** [フロントエンド仕様書](../architecture/01_Frontend_Architecture.md#ディレクトリ構造-src) を参照
 
 ---
 
@@ -132,4 +114,4 @@ src/
 
 ## 8. 次のステップ
 
-ユーザーインターフェースが完成したら、**Phase 4: Monetization** で決済機能を実装する。
+ユーザーインターフェースが完成したら、**Phase 4: Automation** でスケジュール自動化を実装する（MVP必須機能）。

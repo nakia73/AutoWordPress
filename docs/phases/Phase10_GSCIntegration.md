@@ -1,8 +1,12 @@
-# Phase 10: GSC Integration（Google Search Console連携・自律改善）詳細仕様書
+# Phase 10: GSC Integration（Google Search Console連携・自律改善）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md)
+> **前のフェーズ:** [← Phase 9: SSO](./Phase9_SSO.md) | **次のフェーズ:** [Phase 11: Headless Evaluation →](./Phase11_HeadlessEvaluation.md)
 
 **テーマ:** Autonomous Optimization
 **ゴール:** Google Search Console APIと連携し、AIが自律的に記事を改善する仕組みを構築
-**前提:** Phase 5（MVP Launch）完了後、十分なデータ蓄積後に実装
+**前提:** Phase 6（MVP Launch）完了後、十分なデータ蓄積後に実装
 
 ---
 

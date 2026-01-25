@@ -1,8 +1,12 @@
-# Phase 7: Visual（画像自動生成）詳細仕様書
+# Phase 7: Visual（画像自動生成）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md)
+> **前のフェーズ:** [← Phase 6: MVP Launch](./Phase6_MVPLaunch.md) | **次のフェーズ:** [Phase 8: Custom Domain →](./Phase8_CustomDomain.md)
 
 **テーマ:** Visual Appeal
 **ゴール:** AI画像生成により、記事のアイキャッチ画像を自動作成する
-**前提:** Phase 5（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
+**前提:** Phase 6（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
 
 ---
 
@@ -70,26 +74,13 @@ async function generateImagePrompt(article: Article): Promise<string> {
 }
 ```
 
-### 3.2 データベーススキーマ
+### 3.2 データベース
 
-```sql
--- 画像設定
-ALTER TABLE products ADD COLUMN image_style VARCHAR(50) DEFAULT 'illustration';
-ALTER TABLE products ADD COLUMN color_theme VARCHAR(50) DEFAULT 'auto';
-ALTER TABLE products ADD COLUMN image_size VARCHAR(20) DEFAULT '1200x630';
+本フェーズで拡張・追加するテーブル：
+- `products` - 画像スタイル設定を追加
+- `generated_images` - 生成画像履歴
 
--- 生成画像履歴
-CREATE TABLE generated_images (
-  id UUID PRIMARY KEY,
-  article_id UUID REFERENCES articles(id),
-  prompt TEXT,
-  image_url VARCHAR(500),
-  storage_path VARCHAR(500),
-  generation_time_ms INTEGER,
-  cost_usd DECIMAL(10, 4),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#画像生成phase-7) を参照
 
 ### 3.3 コスト管理
 

@@ -1,14 +1,20 @@
-# Phase 6: Automation（スケジュール自動化）詳細仕様書
+# Phase 4: Automation（スケジュール自動化）【MVP必須】
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
+> **前のフェーズ:** [← Phase 3: User Interface](./Phase3_UserInterface.md) | **次のフェーズ:** [Phase 5: Monetization →](./Phase5_Monetization.md)
+>
+> **実施週:** Week 3
 
 **テーマ:** Hands-Free Operation
 **ゴール:** ユーザー定義スケジュールで記事を自動生成・公開する仕組みを構築
-**前提:** Phase 5（MVP Launch）完了後、Betaフィードバックに基づき優先度決定
+**重要:** 「放置OK」の訴求と機能の整合性を確保するため、**MVP必須機能**として位置づけ
 
 ---
 
 ## 1. 目的
 
-MVPでは手動で「記事生成」ボタンを押す必要があります。
+「自動で資産が積み上がる」「放置でOK」というArgo Noteの核心的価値提案を実現します。
 本フェーズで**完全自動運用**を実現し、ユーザーは設定後は何もしなくても記事が増え続ける状態を作ります。
 
 ---
@@ -42,61 +48,53 @@ MVPでは手動で「記事生成」ボタンを押す必要があります。
 
 ### 3.1 アーキテクチャ
 
+**実行基盤:** Inngest（長時間処理・自動リトライ対応）
+
 ```
 ┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  Vercel Cron    │────▶│  Redis Queue │────▶│  Worker Process │
-│  (トリガー)      │     │  (BullMQ)    │     │  (記事生成)      │
+│  Inngest Cron   │────▶│   Inngest    │────▶│  Inngest Worker │
+│  (スケジュール)  │     │  (オーケスト) │     │  (記事生成)      │
 └─────────────────┘     └──────────────┘     └─────────────────┘
                                                       │
                               ┌───────────────────────┼───────────────────────┐
                               ▼                       ▼                       ▼
                        ┌────────────┐          ┌────────────┐          ┌────────────┐
-                       │  LLM API   │          │  WordPress │          │  通知送信   │
-                       │  (生成)    │          │  (投稿)    │          │  (Email)   │
+                       │Claude 3.5  │          │  WordPress │          │  通知送信   │
+                       │  Sonnet    │          │  (投稿)    │          │  (Email)   │
                        └────────────┘          └────────────┘          └────────────┘
 ```
 
-### 3.2 データベーススキーマ
+### 3.2 データベース
 
-```sql
--- スケジュール設定
-CREATE TABLE schedules (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  cron_expression VARCHAR(50),      -- "0 9 * * 1,3,5" (月水金9時)
-  articles_per_run INTEGER DEFAULT 1,
-  publish_mode VARCHAR(20) DEFAULT 'draft',
-  is_active BOOLEAN DEFAULT true,
-  next_run_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+本フェーズで追加するテーブル：
+- `schedules` - スケジュール設定（Cron式、実行頻度等）
+- `schedule_jobs` - スケジュール実行履歴
 
--- ジョブ履歴
-CREATE TABLE schedule_jobs (
-  id UUID PRIMARY KEY,
-  schedule_id UUID REFERENCES schedules(id),
-  status VARCHAR(20),               -- queued, running, completed, failed
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP,
-  articles_generated INTEGER,
-  error_message TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#自動化機能phase-6) を参照
 
-### 3.3 Cron設定例
+### 3.3 Inngest設定例
 
 ```typescript
-// vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/cron/process-schedules",
-      "schedule": "*/5 * * * *"  // 5分ごとにチェック
+// src/inngest/functions/scheduled-generation.ts
+import { inngest } from '../client';
+
+export const scheduledGeneration = inngest.createFunction(
+  { id: 'scheduled-article-generation' },
+  { cron: 'TZ=Asia/Tokyo 0 9 * * *' }, // 毎日9時（日本時間）
+  async ({ event, step }) => {
+    // Step 1: 対象ユーザーの取得
+    const users = await step.run('fetch-scheduled-users', async () => {
+      return await getScheduledUsers();
+    });
+
+    // Step 2: 各ユーザーの記事生成（並列実行）
+    for (const user of users) {
+      await step.run(`generate-for-${user.id}`, async () => {
+        return await generateArticle(user);
+      });
     }
-  ]
-}
+  }
+);
 ```
 
 ---

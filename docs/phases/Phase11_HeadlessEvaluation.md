@@ -1,8 +1,12 @@
-# Phase 11: Headless Evaluation（Headless WordPress化の妥当性評価）詳細仕様書
+# Phase 11: Headless Evaluation（Headless WordPress化の妥当性評価）
+
+> **サービス名:** Argo Note
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [マスターアーキテクチャ](../architecture/00_Master_Architecture.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md)
+> **前のフェーズ:** [← Phase 10: GSC Integration](./Phase10_GSCIntegration.md)
 
 **テーマ:** Architecture Evolution
 **ゴール:** Headless WordPress化（Static Export + Edge配信）の妥当性を評価し、Go/No-Go判定を行う
-**前提:** Phase 5（MVP Launch）完了後、サービスが安定稼働してから検討
+**前提:** Phase 6（MVP Launch）完了後、サービスが安定稼働してから検討
 
 ---
 
