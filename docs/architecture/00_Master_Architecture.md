@@ -54,20 +54,34 @@
 
 - **Platform:** **DigitalOcean VPS**
 - **Architecture:** **WordPress Multisite**（100サイトまで単一VPS）→ [詳細ガイド](./07_WordPress_Multisite_Guide.md)
-- **Network:** Cloudflare (DNS, CDN, SSL)
+- **Network/Security:** Cloudflare（詳細下記）
 - **Storage:** **Cloudflare R2**（メディアファイル）
 - **Monitoring:** UptimeRobot, Sentry
+
+#### Cloudflare利用サービス一覧
+
+| サービス | 用途 | プラン |
+|---------|------|--------|
+| **Cloudflare DNS** | ドメイン管理、サブドメインルーティング | Free |
+| **Cloudflare CDN** | 静的ファイルキャッシュ、グローバル配信 | Free |
+| **Cloudflare SSL** | ワイルドカードSSL証明書（*.argonote.app） | Free |
+| **Cloudflare WAF** | DDoS対策、Web攻撃防御、Bot対策 | Free |
+| **Cloudflare R2** | メディアファイルストレージ（エグレス無料） | 従量課金 |
+| **Cloudflare Proxy** | リバースプロキシ、オリジンIP秘匿 | Free |
+
+**注:** 全てCloudflareのFreeプランで対応可能。R2のみ従量課金（10GB/月無料枠あり）。
 
 ### [04. AIパイプライン・ジョブシステム](./04_AI_Pipeline.md)
 
 記事生成、分析、画像生成を行う非同期処理フローです。
 
-- **Text Gen (Main):** **Claude 3.5 Sonnet**（LiteLLMプロキシ経由）
-- **Text Gen (Fallback):** **GPT-4o-mini**
-- **Search:** Tavily API
+- **Text Gen:** **Gemini 3.0 Pro**（LiteLLMプロキシ経由、ソフトコーディング）
+- **Search/競合調査:** **Tavily API** → LLM解釈
 - **Scraping:** **Firecrawl + Jina Reader**（フォールバック）
 - **Image (MVP):** Unsplash/Pexels → **DALL-E 3**（Phase 7）
 - **Scheduler:** **Inngest**（スケジュール自動化）
+
+**重要:** LLMモデルはソフトコーディング（環境変数で切り替え可能）とする。ハードコード禁止。
 
 ---
 
@@ -84,9 +98,10 @@ graph TD
     end
 
     subgraph "AI Logic Layer"
-        Inngest -->|Analyze/Generate| LLM[Claude 3.5 Sonnet]
-        Inngest -->|Search| Search[Tavily + Firecrawl]
-        Inngest -->|Fallback| LLM_FB[GPT-4o-mini]
+        Inngest -->|Analyze/Generate| LLM[Gemini 3.0 Pro<br/>※ソフトコーディング]
+        Inngest -->|Search/競合調査| Search[Tavily API]
+        Search -->|解釈| LLM
+        Inngest -->|Scraping| Scraper[Firecrawl/Jina Reader]
     end
 
     subgraph "Infrastructure Layer (DigitalOcean VPS)"

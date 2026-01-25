@@ -7,8 +7,18 @@
 
 ## 1. ユーザー登録〜プロダクト分析〜ブログ構築フロー
 
-ユーザーがサインアップし、プロダクトURLを入力してから、ブログが実際に立ち上がるまでの流れです。
-ここではAPIサーバーが「コントローラー」として振る舞い、重い処理はQueue経由でWorkerにオフロードしています。
+ユーザーがサインアップし、プロダクト情報を入力してから、ブログが実際に立ち上がるまでの流れです。
+**プロダクト分析は複数の入力方式に対応**しており、ユーザーの状況に応じて選択できます。
+
+### プロダクト分析の入力方式
+
+| 方式 | 対象ユーザー | 入力内容 |
+|------|-------------|----------|
+| **A. URLクロール** | 明確なプロダクトサイトがある | URLを貼り付け → Firecrawl/Jina Readerで情報取得 |
+| **B. インタラクティブ** | プロダクトが未確定/開発中 | 質問に回答 → LLMが整理 |
+| **C. 競合調査** | 市場参入を検討中 | キーワード入力 → Tavily検索 → LLM解釈 |
+
+**重要:** 方式Cでは、Tavily Search API → LLM解釈 のフローが**必須**です。
 
 ```mermaid
 sequenceDiagram
@@ -18,23 +28,50 @@ sequenceDiagram
     participant DB as Supabase (PostgreSQL)
     participant Inngest as Inngest (Worker)
     participant Analyzer as AI Worker (Product Analysis)
+    participant Tavily as Tavily Search API
+    participant Scraper as Firecrawl/Jina Reader
+    participant LLM as Gemini 3.0 Pro (LiteLLM)
     participant Provisioner as WP Provisioning Worker
-    participant External as External APIs (Claude/Firecrawl)
     participant Cloudflare as Cloudflare API
     participant VPS as DigitalOcean VPS
 
-    User->>NextUI: サインアップ & プロダクトURL入力
-    NextUI->>NextAPI: POST /api/products (URL, info)
+    User->>NextUI: サインアップ
+    NextUI->>User: 分析方式を選択（A/B/C）
+
+    alt 方式A: URLクロール
+        User->>NextUI: プロダクトURL入力
+        NextUI->>NextAPI: POST /api/products (mode: url, url: ...)
+    else 方式B: インタラクティブ
+        User->>NextUI: 質問に回答（プロダクト概要、ターゲット等）
+        NextUI->>NextAPI: POST /api/products (mode: interactive, answers: ...)
+    else 方式C: 競合調査
+        User->>NextUI: キーワード・業界入力
+        NextUI->>NextAPI: POST /api/products (mode: research, keywords: ...)
+    end
+
     NextAPI->>DB: プロダクトレコード作成 (Status: PENDING)
     NextAPI->>Inngest: Job: ANALYZE_PRODUCT 追加
     NextAPI->>NextUI: 202 Accepted (Polling開始)
 
     par Async Analysis
         Analyzer->>Inngest: Job取得
-        Analyzer->>External: FirecrawlでURL解析
-        External-->>Analyzer: 解析結果
-        Analyzer->>External: Claudeでペルソナ・クラスター生成
-        External-->>Analyzer: 分析結果 (JSON)
+
+        alt 方式A: URLクロール
+            Analyzer->>Scraper: URLをクロール
+            Scraper-->>Analyzer: ページ内容
+            Analyzer->>LLM: 内容からペルソナ・戦略を生成
+        else 方式B: インタラクティブ
+            Analyzer->>LLM: 回答からペルソナ・戦略を生成
+        else 方式C: 競合調査
+            Analyzer->>Tavily: 競合サイト・人気記事を検索
+            Tavily-->>Analyzer: 検索結果（生データ）
+            Note over Analyzer,LLM: ※必須フロー: 検索結果をLLMで解釈
+            Analyzer->>LLM: 検索結果を解釈・分析
+            LLM-->>Analyzer: 競合分析・コンセプト提案
+            Analyzer->>LLM: ペルソナ・戦略を生成
+        end
+
+        LLM-->>Analyzer: 分析結果 (JSON)
         Analyzer->>DB: ProductAnalysis保存 & Status更新
         Analyzer->>Inngest: Job: PROVISION_BLOG 追加
     end
@@ -69,8 +106,8 @@ sequenceDiagram
     participant Inngest as Inngest (Worker)
     participant Writer as AI Worker (Writer)
     participant DB as Supabase (PostgreSQL)
-    participant Search as Tavily/Firecrawl API
-    participant LLM as Claude 3.5 Sonnet (LiteLLM)
+    participant Tavily as Tavily Search API
+    participant LLM as Gemini 3.0 Pro (LiteLLM)<br/>※ソフトコーディング
     participant ImageGen as Unsplash/Pexels (MVP)
     participant UserWP as WordPress Multisite
 
@@ -89,9 +126,10 @@ sequenceDiagram
 
     rect rgb(240, 248, 255)
         note right of Writer: Research & Planning
-        Writer->>Search: 検索実行 (Trends, Competitors)
-        Search-->>Writer: 検索結果
-        Writer->>LLM: 構成案作成 (H2, H3)
+        Writer->>Tavily: 検索実行 (Trends, Competitors)
+        Tavily-->>Writer: 検索結果（生データ）
+        Note over Writer,LLM: ※必須: 検索結果をLLMで解釈
+        Writer->>LLM: 検索結果を解釈 + 構成案作成 (H2, H3)
     end
 
     rect rgb(255, 248, 240)

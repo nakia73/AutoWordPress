@@ -22,6 +22,25 @@
 - コネクションプーリング：Supabase組み込み（Supavisor）
 - WordPress用：MariaDB（VPS上）- 2DB構成を許容
 
+### MariaDB採用理由（WordPress用）
+
+WordPress Multisite用のデータベースとしてMariaDBを採用する理由：
+
+1. **WordPress公式推奨**: WordPressはMySQL/MariaDBを公式サポート。MariaDBはMySQLの完全互換フォーク
+2. **パフォーマンス優位性**:
+   - 改良されたクエリオプティマイザ
+   - 効率的なストレージエンジン（Aria）
+   - スレッドプール機能が標準搭載
+3. **ライセンス・継続性**:
+   - MySQLはOracle所有でライセンス懸念あり
+   - MariaDBはGPL v2で永続的にオープンソース保証
+   - MySQL創設者が主導する活発な開発コミュニティ
+4. **業界標準**:
+   - DigitalOcean、Linode等の主要VPSで標準採用
+   - WordPressホスティング大手（WP Engine、Kinsta）もMariaDB採用
+
+**注:** MySQLでも動作するが、VPS環境ではMariaDBがデファクトスタンダード。
+
 **ORM:** Prisma
 
 - スキーマ定義の明確化とマイグレーション管理の容易さ。
@@ -246,10 +265,13 @@ CREATE INDEX idx_sso_tokens_expires ON sso_tokens(expires_at);
 
 1.  **Stripe (Payment):** サブスクリプション管理
 2.  **Supabase Auth:** Google OAuth, Email/Pass
-3.  **Tavily API:** 情報収集・検索
+3.  **Tavily API:** 情報収集・検索・競合調査 → **必ずLLMで解釈するフロー**
 4.  **Firecrawl + Jina Reader:** スクレイピング（フォールバック対応）
-5.  **Claude 3.5 Sonnet:** メインLLM（LiteLLMプロキシ経由）
-6.  **GPT-4o-mini:** フォールバックLLM
+5.  **Gemini 3.0 Pro:** LLM（LiteLLMプロキシ経由）※ソフトコーディング
+
+**重要:**
+- LLMモデルはハードコード禁止。環境変数で切り替え可能な設計とする。
+- フォールバックは設けない。エラー時はユーザーに表示し、別モデル選択を促す（Phase 12）。
 
 ## ジョブキュー・非同期処理
 

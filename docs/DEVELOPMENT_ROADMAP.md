@@ -27,7 +27,7 @@ docs/
     ├── Phase0_Mockup.md      # モックアップ・集客
     ├── Phase1_Infrastructure.md  # インフラ基盤構築
     ├── ...
-    └── Phase11_HeadlessEvaluation.md
+    └── Phase12_ModelSelection.md
 ```
 
 **ドキュメントの役割:**
@@ -59,6 +59,7 @@ docs/
 | [Phase 9](./phases/Phase9_SSO.md) | SSO | Seamless Experience | ダッシュボード→WP管理画面のシームレスログイン |
 | [Phase 10](./phases/Phase10_GSCIntegration.md) | GSC Integration | Optimization | Google Search Console連携・AI自律改善 |
 | [Phase 11](./phases/Phase11_HeadlessEvaluation.md) | Headless Evaluation | Evolution | Headless WordPress化の妥当性評価 |
+| [Phase 12](./phases/Phase12_ModelSelection.md) | Model Selection | Flexibility | ユーザーによるLLMモデル選択機能 |
 
 ---
 
@@ -89,8 +90,7 @@ docs/
 | Auth | **Supabase Auth** | Google OAuth対応 |
 | Database | **Supabase (PostgreSQL)** + MariaDB (WP) | 2DB構成 |
 | Worker | **Inngest** | 長時間処理・自動リトライ |
-| AI (Main) | **Claude 3.5 Sonnet** | LiteLLMプロキシ経由 |
-| AI (Fallback) | **GPT-4o-mini** | |
+| AI | **Gemini 3.0 Pro** | LiteLLMプロキシ経由、ソフトコーディング |
 | Search | Tavily API, **Firecrawl + Jina Reader** | |
 | Image | Unsplash/Pexels (MVP) → DALL-E 3 (Phase 7) | |
 | Storage | **Cloudflare R2** | エグレス無料 |
@@ -141,6 +141,7 @@ docs/
 - [Phase 9: SSO](./phases/Phase9_SSO.md) - シームレスログイン
 - [Phase 10: GSC Integration](./phases/Phase10_GSCIntegration.md) - Search Console連携
 - [Phase 11: Headless Evaluation](./phases/Phase11_HeadlessEvaluation.md) - Headless化評価
+- [Phase 12: Model Selection](./phases/Phase12_ModelSelection.md) - LLMモデル選択機能
 
 ### コンセプト・決定事項
 - [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) - 全技術選定・ビジネス決定の記録
