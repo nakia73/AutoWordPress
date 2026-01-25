@@ -3,6 +3,8 @@
 > **サービス名:** Argo Note
 > **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [インフラ仕様](./03_Infrastructure_Ops.md)
 > **実装フェーズ:** [Phase 1: Infrastructure + Auth](../phases/Phase1_Infrastructure.md)
+>
+> **➡️ 実装ガイド:** [WordPress Multisite実装ガイド](./07_WordPress_Multisite_Guide.md)（本文書の決定に基づく詳細設計）
 
 **目的:**
 現在の「1クライアント = 1 Dockerコンテナ」というアーキテクチャから、より効率的で管理しやすい「WordPress Multisite」への移行の妥当性を評価し、技術的な設計を行う。
@@ -79,3 +81,13 @@ Multisiteで最も技術的な難所となるのが、「サブディレクト�
 - **理由1:** MVPにおける初期構築コストとランニングコストを劇的に下げられる。
 - **理由2:** 「3分でセットアップ」を「0秒（即時）」に短縮できる。
 - **理由3:** バージョン管理、セキュリティパッチ適用が一元管理でき、少人数での運用に適している。
+
+---
+
+## 5. 次のステップ
+
+本文書の決定に基づき、以下を参照：
+
+- **[WordPress Multisite実装ガイド](./07_WordPress_Multisite_Guide.md)** - ドメイン戦略、セキュリティ設計、スケーリング方針の詳細
+- **[Phase 1: Infrastructure](../phases/Phase1_Infrastructure.md)** - 実装フェーズ
+- **[Phase 8: Custom Domain](../phases/Phase8_CustomDomain.md)** - 独自ドメイン機能

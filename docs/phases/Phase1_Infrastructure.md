@@ -1,7 +1,7 @@
 # Phase 1: Infrastructure + Auth（基盤構築 + 認証）
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [Multisite検討](../architecture/06_Multisite_feasibility.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [Multisite検討](../architecture/06_Multisite_feasibility.md) | [**Multisiteガイド**](../architecture/07_WordPress_Multisite_Guide.md)
 > **前のフェーズ:** [← Phase 0: Mockup](./Phase0_Mockup.md) | **次のフェーズ:** [Phase 2: Core AI →](./Phase2_CoreAI.md)
 >
 > **実施週:** Week 1
@@ -34,6 +34,7 @@
 
 - 一つのWordPressから無限にサブドメイン（サイト）を切り出せる「Multisite」の構築
 - WP-CLI を組み込み、バックエンドからプログラムでサイトを即時作成できる状態にする
+- **詳細:** [WordPress Multisite実装ガイド](../architecture/07_WordPress_Multisite_Guide.md)（ドメイン戦略・セキュリティ設計含む）
 
 ### Step 4: 認証基盤（追加）
 

@@ -1,7 +1,7 @@
 # 03. インフラ・WordPress実行基盤アーキテクチャ
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [Multisite検討](./06_Multisite_feasibility.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [Multisite検討](./06_Multisite_feasibility.md) | [**Multisiteガイド**](./07_WordPress_Multisite_Guide.md)
 > **実装フェーズ:** [Phase 1: Infrastructure](../phases/Phase1_Infrastructure.md), [Phase 6: MVP Launch](../phases/Phase6_MVPLaunch.md), [Phase 8: Custom Domain](../phases/Phase8_CustomDomain.md)
 
 本サービスのコアコンピタンスである「WordPressの自動構築・運用」を担うインフラ層の設計です。
@@ -15,6 +15,9 @@
 - **理由:** コストパフォーマンスが最も良く、詳細な制御が可能。
 
 ## アーキテクチャ: WordPress Multisite
+
+> **詳細ガイド:** [WordPress Multisite実装ガイド](./07_WordPress_Multisite_Guide.md)
+> ドメイン戦略、セキュリティ設計、スケーリング方針の詳細を参照
 
 **採用理由:**
 - 1つのWordPressインストールで複数サイトを管理（効率的）

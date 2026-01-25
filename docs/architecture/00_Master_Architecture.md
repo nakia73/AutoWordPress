@@ -1,6 +1,6 @@
 # 00. アーキテクチャ - マスタードキュメント
 
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [全フェーズ一覧](../phases/)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [WordPress Multisiteガイド](./07_WordPress_Multisite_Guide.md) | [全フェーズ一覧](../phases/)
 
 ## 概要
 
@@ -53,7 +53,7 @@
 実際にユーザーのブログが稼働する環境です。本サービスの心臓部です。
 
 - **Platform:** **DigitalOcean VPS**
-- **Architecture:** **WordPress Multisite**（100サイトまで単一VPS）
+- **Architecture:** **WordPress Multisite**（100サイトまで単一VPS）→ [詳細ガイド](./07_WordPress_Multisite_Guide.md)
 - **Network:** Cloudflare (DNS, CDN, SSL)
 - **Storage:** **Cloudflare R2**（メディアファイル）
 - **Monitoring:** UptimeRobot, Sentry

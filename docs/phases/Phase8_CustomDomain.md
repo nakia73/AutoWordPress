@@ -1,7 +1,7 @@
 # Phase 8: Custom Domain（独自ドメイン接続）
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [インフラ仕様](../architecture/03_Infrastructure_Ops.md) | [**Multisiteガイド**](../architecture/07_WordPress_Multisite_Guide.md)
 > **前のフェーズ:** [← Phase 7: Visual](./Phase7_Visual.md) | **次のフェーズ:** [Phase 9: SSO →](./Phase9_SSO.md)
 
 **テーマ:** Brand Identity
@@ -14,6 +14,11 @@
 
 MVPでは `{slug}.argonote.app` のサブドメインを提供。
 ブランディングを重視するユーザー向けに**独自ドメイン**での運用を可能にします。
+
+> **SEOと独自ドメインの関係:** [WordPress Multisiteガイド §3](../architecture/07_WordPress_Multisite_Guide.md#3-ドメイン戦略) を参照
+> - サブドメインのSEO特性
+> - 独自ドメインへのSEO評価引き継ぎ方法
+> - Domain Mappingの技術詳細
 
 ---
 
