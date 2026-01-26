@@ -1,7 +1,7 @@
 # 04. AIパイプライン・ジョブシステム
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [シーケンス図](./05_Sequence_Diagrams.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [シーケンス図](./05_Sequence_Diagrams.md) | [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md)
 > **実装フェーズ:** [Phase 2: Core AI](../phases/Phase2_CoreAI.md), [Phase 4: Automation](../phases/Phase4_Automation.md), [Phase 7: Visual](../phases/Phase7_Visual.md), [Phase 10: GSC連携](../phases/Phase10_GSCIntegration.md), [Phase 15: Prompt Intelligence](../phases/Phase15_PromptIntelligence.md)
 
 ブログ記事の品質と継続性を担保するAI処理系の設計です。
@@ -97,22 +97,28 @@ Phase G          Phase F           Phase E
 
 ---
 
-### Phase D: 競合/SERP分析（Competitor & SERP Analysis）
+### Phase D: 競合/SERP分析（Competitor & SERP Analysis） ※実装済み
 
 **目的:** 各キーワードで上位表示されている記事を分析し、勝てる構成を設計
 
-**処理:**
-1. 優先キーワードでTavily Search実行
-2. 上位10記事のURL・タイトル・概要を取得
-3. LLMで分析:
+**処理:** ※3段階検索（Multi-Phase Search）を実装
+1. **Phase 1 - NEWS検索:** 最新ニュース（24時間以内）を取得
+2. **Phase 2 - SNS検索:** X/Twitter, Redditでのリアルタイム反応を取得
+3. **Phase 3 - OFFICIAL検索:** 公式・権威あるソースから情報を取得
+4. **スコアフィルタリング:** 関連度スコア0.6以上の結果のみ採用
+5. **Tavily AI Summary活用:** 各フェーズのanswerフィールドを優先抽出
+6. LLMで分析:
    - 共通している見出し構成
    - 不足している観点
    - 差別化可能なポイント
+
+**実装ファイル:** `lib/ai/tavily-client.ts`
 
 **出力:**
 - 競合記事サマリー（各キーワード）
 - 推奨見出し構成（差別化込み）
 - 参照すべきソースURL
+- NEWS/SNS/OFFICIAL各カテゴリの結果
 
 ---
 
@@ -163,10 +169,13 @@ Phase G          Phase F           Phase E
    - Output: HTMLタグ整合性、導線自然さ、SEOチェック
    - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
 
-4. **Illustrator（画像）**
-   - Input: 記事タイトル・要約
-   - Tool: Nanobana Pro
-   - Output: アイキャッチ画像URL
+4. **Illustrator（画像）** ※実装済み
+   - Input: 記事タイトル・要約・セクション見出し
+   - Tool: NanoBanana Pro（gemini-3-pro-image-preview）
+   - Output: アイキャッチ画像 + セクション別画像（H2/H3見出し直後に挿入）
+   - **実装ファイル:**
+     - `lib/ai/image-generator.ts` - サムネイル・セクション画像生成
+     - `lib/ai/section-image-service.ts` - HTML見出し抽出・画像挿入
 
 ---
 
@@ -236,10 +245,10 @@ Phase G          Phase F           Phase E
     - **Output:** HTMLタグの整合性チェック、プロダクト導線の自然さチェック
     - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
 
-6.  **Illustrator (画像):**
-    - **Input:** 記事タイトル・要約
-    - **Tool:** **Nanobana Pro**
-    - **Output:** アイキャッチ画像 (URL)
+6.  **Illustrator (画像):** ※実装済み
+    - **Input:** 記事タイトル・要約・セクション見出し
+    - **Tool:** **NanoBanana Pro**（gemini-3-pro-image-preview）
+    - **Output:** アイキャッチ画像 (URL) + セクション別画像（H2/H3見出し直後に挿入）
 
 ## LLMモデル戦略（確定）
 
@@ -295,3 +304,156 @@ LLM_MAX_RETRIES=3
 
 過去に書いた記事の内容と重複しないように、または内部リンクを貼るために、過去記事のメタデータ（タイトル、Slug、要約）をVector Store (pgvector on Supabase) に保存することも検討します（Future）。
 MVPでは、「直近10記事のタイトルリスト」をプロンプトに含める簡易的な重複防止策をとります。
+
+---
+
+## 実装済みモジュール一覧（2026年1月更新）
+
+> Rapid-Note2から流用・移植した機能を含む新規実装モジュールの一覧
+
+### Tavily検索クライアント（強化版）
+
+**ファイル:** `app/src/lib/ai/tavily-client.ts`
+
+**機能:**
+- 3段階マルチフェーズ検索（NEWS → SNS → OFFICIAL）
+- 関連度スコアフィルタリング（min_relevance_score: 0.6）
+- Tavily AI Summary（answer）の活用
+- time_range対応（day, week, month, year）
+- include_domains / exclude_domains対応
+- country設定対応（japan等）
+
+**主要メソッド:**
+```typescript
+multiPhaseSearch(keyword, options): Promise<MultiPhaseResearchResult>
+filterByScore(results, minScore): TavilySearchResult[]
+researchForArticle(keyword, options): Promise<string>
+```
+
+**流用元:** `Rapid-Note2/src/research.py`
+
+---
+
+### 画像生成サービス
+
+**ファイル:** `app/src/lib/ai/image-generator.ts`
+
+**機能:**
+- NanoBanana Pro（gemini-3-pro-image-preview）によるサムネイル生成
+- 日本語テロップ対応
+- 参照画像によるスタイル維持機能
+- LLMによる最終プロンプト生成
+
+**主要メソッド:**
+```typescript
+generateThumbnail(title, body, options): Promise<ThumbnailResult>
+generateSectionImage(sectionText, articleTitle, options): Promise<ImageGenerationResult>
+generateImageWithAPI(prompt, options): Promise<Buffer>
+```
+
+**流用元:** `Rapid-Note2/backend/app/services/thumbnail_service.py`
+
+---
+
+### セクション画像サービス
+
+**ファイル:** `app/src/lib/ai/section-image-service.ts`
+
+**機能:**
+- HTML見出し（H2/H3）の自動抽出
+- 各セクションに対応する画像の自動生成
+- 生成画像のHTML自動挿入
+- WordPress Media APIとの連携対応
+
+**主要メソッド:**
+```typescript
+processArticleImages(articleHtml, articleTitle, options): Promise<SectionImageResult>
+generateSectionImages(articleHtml, articleTitle, options): Promise<Array<{header, imageData, error}>>
+```
+
+**流用元:** `Rapid-Note2/backend/app/services/section_image_service.py`
+
+---
+
+### 記事生成パイプライン（統合版）
+
+**ファイル:** `app/src/lib/ai/article-generator.ts`
+
+**6ステップパイプライン:**
+1. **Research:** 3段階マルチフェーズ検索による調査
+2. **Outline:** 記事構成案の生成
+3. **Content:** 本文（HTML）の生成
+4. **Meta Description:** メタディスクリプションの生成
+5. **Thumbnail:** サムネイル画像の生成（includeImages有効時）
+6. **Section Images:** セクション別画像の生成・挿入（includeImages有効時）
+
+**使用例:**
+```typescript
+const result = await articleGenerator.generate({
+  targetKeyword: 'AI記事生成',
+  productName: 'Argo Note',
+  productDescription: '...',
+  articleType: 'article',
+  language: 'ja',
+  includeImages: true, // 画像生成を有効化
+});
+```
+
+---
+
+### 環境変数
+
+```env
+# LLM設定
+LLM_MODEL=gemini-2.0-flash-exp
+LITELLM_API_KEY=...
+LITELLM_BASE_URL=...
+
+# Tavily検索
+TAVILY_API_KEY=tvly-...
+
+# NanoBanana Pro画像生成
+GOOGLE_API_KEY=...  # gemini-3-pro-image-preview用
+```
+
+---
+
+## パイプライン v2.0（将来拡張）
+
+> **追記日:** 2026年1月27日
+> **参照:** [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md)
+
+ファーストプリンシプル分析から導出された、記事生成パイプラインの進化版構想。
+
+### 追加予定機能
+
+| 機能 | 説明 | 対象Phase |
+|------|------|-----------|
+| **Phase 0: Soul Setup** | ユーザーのライティングスタイル・価値観を学習し、User Style Vectorとして保存 | Phase 12 |
+| **F7: Transparency Footer** | AI生成の協業プロセスを記事末尾に自動挿入 | MVP追加推奨 |
+| **G1: Living Article Monitor** | 公開記事のフレッシュネス監視、新情報検知 | Phase 10 |
+| **G2: Update Suggestion** | 更新提案の自動生成、ユーザー承認フロー | Phase 10 |
+
+### Human-Led AI アプローチ
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  人間の領域                    AIの領域                      │
+├─────────────────────────────────────────────────────────────┤
+│  ◆ ビジョン設定               ◆ 情報収集（Tavily 3段階）   │
+│  ◆ ペルソナ定義               ◆ 構造化（アウトライン）     │
+│  ◆ 体験の注入                 ◆ ドラフト生成               │
+│  ◆ 最終判断                   ◆ 画像生成                   │
+│  ◆ 方向性の修正               ◆ 継続的更新                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 品質レベル定義
+
+| レベル | 名称 | 内容 | 対象 |
+|--------|------|------|------|
+| **Lv.1** | Quick Draft | AI生成のみ、基本SEO対策 | 速度重視のテスト記事 |
+| **Lv.2** | Standard | ペルソナ適用、ストーリーテリング | 通常の運用記事 |
+| **Lv.3** | Premium | 独自視点追加、深い専門性 | ピラーページ、重要記事 |
+
+詳細は [FIRST_PRINCIPLES_ARTICLE_GENERATION.md](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md) を参照。

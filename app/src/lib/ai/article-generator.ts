@@ -1,8 +1,11 @@
 // Argo Note - Article Generator Service
 // Combines Tavily research with LLM generation
+// Phase 4: Integrated with image generation (NanoBanana Pro)
 
 import { llmClient, ARTICLE_PROMPTS } from './llm-client';
 import { tavilyClient, RESEARCH_QUERIES } from './tavily-client';
+import { imageGenerator } from './image-generator';
+import { sectionImageService } from './section-image-service';
 import type { ArticleContent, ArticleType } from '@/types';
 
 type ArticleOutline = {
@@ -24,24 +27,15 @@ type GenerationOptions = {
 };
 
 export class ArticleGenerator {
-  // Step 1: Research the topic
-  async research(keyword: string) {
-    const queries = RESEARCH_QUERIES.forKeyword(keyword);
+  // Step 1: Research the topic using enhanced 3-phase search
+  async research(keyword: string, language: 'en' | 'ja' = 'en') {
+    // Use enhanced multi-phase research (NEWS, SNS, OFFICIAL)
+    const researchContext = await tavilyClient.researchForArticle(keyword, {
+      language,
+      includeSubQueries: true,
+    });
 
-    // Perform searches
-    const searchResults = await tavilyClient.researchTopic(keyword, queries);
-
-    // Compile research into a summary
-    let researchSummary = '';
-    for (const [query, results] of searchResults) {
-      researchSummary += `\n## Research: ${query}\n`;
-      for (const result of results.results.slice(0, 3)) {
-        researchSummary += `- ${result.title}: ${result.content.slice(0, 200)}...\n`;
-        researchSummary += `  Source: ${result.url}\n`;
-      }
-    }
-
-    return researchSummary;
+    return researchContext;
   }
 
   // Step 2: Generate article outline
@@ -130,32 +124,121 @@ Content Summary: ${content.slice(0, 1000)}...
     return metaDescription.slice(0, 160);
   }
 
+  // Step 5: Generate thumbnail image
+  async generateThumbnail(
+    title: string,
+    content: string,
+    options?: { referenceImageUrl?: string }
+  ): Promise<{ imageData: Buffer; promptUsed: string } | null> {
+    try {
+      console.log('Generating thumbnail for article:', title);
+      const result = await imageGenerator.generateThumbnail(title, content, {
+        referenceImageUrl: options?.referenceImageUrl,
+      });
+
+      if (result.isFallback) {
+        console.warn('Thumbnail generation failed:', result.errorMessage);
+        return null;
+      }
+
+      return {
+        imageData: result.imageData,
+        promptUsed: result.promptUsed,
+      };
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      return null;
+    }
+  }
+
+  // Step 6: Process section images
+  async processContentWithSectionImages(
+    htmlContent: string,
+    articleTitle: string,
+    options?: { maxImages?: number; referenceImageUrl?: string }
+  ): Promise<{ processedHtml: string; imagesGenerated: number; errors: string[] }> {
+    try {
+      console.log('Processing section images for article:', articleTitle);
+      const result = await sectionImageService.processArticleImages(
+        htmlContent,
+        articleTitle,
+        {
+          maxImages: options?.maxImages ?? 5,
+          referenceImageUrl: options?.referenceImageUrl,
+        }
+      );
+
+      if (result.errors.length > 0) {
+        console.warn('Section image errors:', result.errors);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error processing section images:', error);
+      return {
+        processedHtml: htmlContent,
+        imagesGenerated: 0,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+  }
+
   // Full article generation pipeline
   async generate(options: GenerationOptions): Promise<ArticleContent> {
-    // Step 1: Research
-    const research = await this.research(options.targetKeyword);
+    const language = options.language || 'en';
+
+    // Step 1: Research (using enhanced 3-phase search)
+    console.log('Step 1: Researching topic with multi-phase search...');
+    const research = await this.research(options.targetKeyword, language);
 
     // Step 2: Generate outline
+    console.log('Step 2: Generating article outline...');
     const outline = await this.generateOutline(options);
 
     // Step 3: Generate content
-    const content = await this.generateContent(outline, research, options);
+    console.log('Step 3: Generating article content...');
+    let content = await this.generateContent(outline, research, options);
 
     // Step 4: Generate meta description
+    console.log('Step 4: Generating meta description...');
     const metaDescription = await this.generateMetaDescription(
       outline.title,
       content,
       options.targetKeyword
     );
 
-    return {
+    // Initialize result
+    const result: ArticleContent = {
       title: outline.title,
       content,
       meta_description: metaDescription,
       target_keyword: options.targetKeyword,
-      search_intent: 'informational', // Could be enhanced to detect intent
+      search_intent: 'informational',
       article_type: options.articleType,
     };
+
+    // Step 5 & 6: Generate images (if enabled)
+    if (options.includeImages) {
+      // Step 5: Generate thumbnail
+      console.log('Step 5: Generating thumbnail...');
+      const thumbnail = await this.generateThumbnail(outline.title, content);
+      if (thumbnail) {
+        result.thumbnail = thumbnail;
+      }
+
+      // Step 6: Process section images
+      console.log('Step 6: Processing section images...');
+      const sectionResult = await this.processContentWithSectionImages(
+        content,
+        outline.title,
+        { maxImages: 5 }
+      );
+      result.content = sectionResult.processedHtml;
+      result.sectionImagesGenerated = sectionResult.imagesGenerated;
+    }
+
+    console.log('Article generation complete!');
+    return result;
   }
 }
 

@@ -1,5 +1,6 @@
 // Argo Note - Generate Article Function
 // Creates article content using AI
+// Phase 4: Integrated with image generation (NanoBanana Pro)
 
 import { inngest } from '../client';
 import { prisma } from '@/lib/prisma/client';
@@ -14,7 +15,7 @@ export const generateArticle = inngest.createFunction(
   },
   { event: 'article/generate' },
   async ({ event, step }) => {
-    const { articleId, targetKeyword } = event.data;
+    const { articleId, targetKeyword, includeImages = false } = event.data;
 
     const startTime = Date.now();
 
@@ -54,6 +55,7 @@ export const generateArticle = inngest.createFunction(
     // Generate article using the ArticleGenerator service
     const generatedContent = await step.run('generate-article-content', async () => {
       console.log(`Generating article for: ${targetKeyword}`);
+      console.log(`Include images: ${includeImages}`);
 
       return articleGenerator.generate({
         targetKeyword: targetKeyword || article.targetKeyword || '',
@@ -61,7 +63,7 @@ export const generateArticle = inngest.createFunction(
         productDescription: product.description || '',
         articleType: (article.articleType as ArticleType) || 'article',
         language,
-        includeImages: false, // Phase 5 feature
+        includeImages,
       });
     });
 
@@ -95,9 +97,26 @@ export const generateArticle = inngest.createFunction(
       });
     });
 
+    // Save generated images metadata (if images were generated)
+    let thumbnailSaved = false;
+    if (includeImages && generatedContent.thumbnail) {
+      await step.run('save-thumbnail-metadata', async () => {
+        await prisma.generatedImage.create({
+          data: {
+            articleId: articleId,
+            prompt: generatedContent.thumbnail?.promptUsed || '',
+            sectionRef: 'thumbnail',
+            // Note: imageUrl and r2ObjectKey will be populated when uploading to storage
+          },
+        });
+        thumbnailSaved = true;
+        console.log('Thumbnail metadata saved');
+      });
+    }
+
     const generationTimeMs = Date.now() - startTime;
 
-    // Create generation log with fact check results
+    // Create generation log with fact check results and image info
     await step.run('create-generation-log', async () => {
       await prisma.articleGenerationLog.create({
         data: {
@@ -110,6 +129,11 @@ export const generateArticle = inngest.createFunction(
           factCheckIssues: factCheckResult.issues.length > 0 ? factCheckResult.issues : undefined,
         },
       });
+
+      // Log image generation info
+      if (includeImages) {
+        console.log(`Images generated - Thumbnail: ${thumbnailSaved}, Section images: ${generatedContent.sectionImagesGenerated || 0}`);
+      }
     });
 
     // Update job status
@@ -136,6 +160,12 @@ export const generateArticle = inngest.createFunction(
       factCheckPassed: factCheckResult.passed,
       factCheckIssues: factCheckResult.issues,
       generationTimeMs,
+      imagesGenerated: includeImages
+        ? {
+            thumbnail: thumbnailSaved,
+            sectionImages: generatedContent.sectionImagesGenerated || 0,
+          }
+        : null,
     };
   }
 );

@@ -63,11 +63,11 @@
 
 ---
 
-#### 🔴 CI-003: URLクロール（Firecrawl）のMVP対応矛盾
+#### 🔴 CI-003: 入力方式A/Bの採用未決定
 
 **発生箇所:**
 - `architecture/05_Sequence_Diagrams.md:17-18` - 方式A「URLクロール」としてFirecrawl/Jina Readerを明記
-- `phases/Phase2_CoreAI.md:26-27` - 「Firecrawl（URL自動クロール）」を「後回し」と明記
+- `phases/Phase2_CoreAI.md:26-27` - A/Bモックアップ検証後に採用判断
 
 **決定事項:** AのURLクロールMockup と BのインタラクティブQ&A Mockup を作成し、XなどのSNSで映像を配信して反応を比較し、どちらが市場に求められているかを検証した上で採用方式を決定する。方式Cは本テスト対象外で、扱いは別途決定する。
 
@@ -186,15 +186,15 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 
 | 方式 | 対象ユーザー | MVP対応 |
 |------|-------------|--------|
-| A. URLクロール | プロダクトサイトあり | ❌（Firecrawl後回し） |
-| B. インタラクティブ | 開発中/未確定 | ✅ |
-| C. 競合調査 | 市場参入検討中 | ✅ |
+| A. URLクロール | プロダクトサイトあり | 検証中 |
+| B. インタラクティブ | 開発中/未確定 | 検証中 |
+| C. 競合調査 | 市場参入検討中 | 未決（本テスト対象外） |
 
-**問題:** 3方式を提示するが、MVPでは方式Aが使えない。ユーザーが混乱する可能性。
+**問題:** 3方式を提示するが、MVP採用方式が未確定。ユーザーが混乱する可能性。
 
 **推奨対応:**
-- MVP UIでは方式B/Cのみ表示
-- または、方式Aを「Coming Soon」として表示
+- A/Bモックアップを作成し、Xで反応を検証
+- 採用方式決定後、MVP UIに表示する方式を確定
 
 ---
 
@@ -281,8 +281,8 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 **問題:** 各ドキュメントで「MVP」「Phase 2以降」「Future」の境界が統一されていない。
 
 **例:**
-- 04_AI_Pipeline.mdは7フェーズ全体を記載（MVPでは一部のみ使用）
-- 05_Sequence_Diagrams.mdは3入力方式を全て記載（MVPでは2方式のみ）
+- 04_AI_Pipeline.mdは7フェーズ全体を記載（MVPでA→Gを実装）
+- 05_Sequence_Diagrams.mdは3入力方式を全て記載（A/B採用は検証で決定）
 
 **推奨対応:**
 - 各ドキュメントに「MVP Scope」セクションを追加
@@ -298,7 +298,7 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 |----|------|-----------------|
 | CI-001 | Fact Check方針の統一（MVP後実装） | Phase2_CoreAI.md / 04_AI_Pipeline.md / CONCEPT_DECISIONS.md |
 | CI-002 | 自動公開デフォルトの統一 | Phase2_CoreAI.md |
-| CI-003 | URLクロールMVP矛盾 | 05_Sequence_Diagrams.md |
+| CI-003 | 入力方式A/B採用決定 | 05_Sequence_Diagrams.md |
 
 ### MVP前に解決推奨
 

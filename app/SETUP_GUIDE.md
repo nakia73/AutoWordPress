@@ -579,8 +579,9 @@ TAVILY_API_KEY="tvly-..."
 # Keywords API (オプション - 未使用なら空でOK)
 KEYWORDS_API_KEY=""
 
-# Nanobana Pro (オプション - Phase 7 画像生成)
-NANOBANA_API_KEY=""
+# NanoBanana Pro (オプション - 画像生成)
+# 注: 実際にはGOOGLE_API_KEYを使用（gemini-3-pro-image-preview）
+NANOBANANA_API_KEY=""
 
 # ============================================
 # Inngest (Background Jobs)

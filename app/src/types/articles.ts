@@ -31,6 +31,12 @@ export type ArticleContent = {
   target_keyword: string;
   search_intent: string;
   article_type: ArticleType;
+  // Optional image data (Phase 4 integration)
+  thumbnail?: {
+    imageData: Buffer;
+    promptUsed: string;
+  };
+  sectionImagesGenerated?: number;
 };
 
 // Article generation config

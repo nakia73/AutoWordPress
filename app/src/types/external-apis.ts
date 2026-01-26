@@ -16,6 +16,8 @@ export type TavilySearchResponse = {
   results: TavilySearchResult[];
   query: string;
   response_time: number;
+  answer?: string; // AI-generated summary (when include_answer is set)
+  request_id?: string; // For debugging/support
 };
 
 // Mapped input for LLM - IR-003
@@ -176,24 +178,24 @@ export type StripeWebhookEvent = {
 };
 
 // ============================================
-// Nanobana Pro API Types (Image Generation)
+// NanoBanana Pro API Types (Image Generation)
 // ============================================
 
-export type NanobanaImageStyle =
+export type NanoBananaImageStyle =
   | 'illustration'
   | 'photography'
   | 'digital_art'
   | 'minimalist';
 
-export type NanobanaRequest = {
+export type NanoBananaRequest = {
   prompt: string;
-  style?: NanobanaImageStyle;
+  style?: NanoBananaImageStyle;
   width?: number;
   height?: number;
   quality?: 'standard' | 'high';
 };
 
-export type NanobanaResponse = {
+export type NanoBananaResponse = {
   image_url: string;
   generation_time_ms: number;
 };
