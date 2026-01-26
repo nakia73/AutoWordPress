@@ -16,10 +16,10 @@
 |------|---------|---------|
 | Part 1 | モジュール間統合リスク | IR-001〜IR-017（17件） |
 | Part 2 | 微視的不整合分析 | IR-018〜IR-046（28件） |
-| Part 3 | マクロ視点整合性分析 | MA-001〜MA-022（22件） |
+| Part 3 | マクロ視点整合性分析 | MA-001〜MA-024（24件） |
 | Part 4 | コンセプト違反・思想矛盾分析 | CV-001〜CV-010（10件） |
 | Part 5 | ファーストプリンシプル・原子分解分析 | FP-001〜FP-012（12件） |
-| **合計** | - | **89件** |
+| **合計** | - | **91件** |
 
 ### 生存確率評価（Part 5 結論）
 
@@ -1557,6 +1557,173 @@ Phase 0 → 0.5 → 1 → 2 → 3 → 4 → 5 → 6
 
 ---
 
+#### MA-023: ユーザー成果トラッキングシステムの未定義（重要度: 高）
+
+**問題箇所:** 全フェーズドキュメント
+
+**問題:**
+サービスの実績をユーザーに明示的に示すための「成果収集・トラッキングシステム」が設計されていない。
+
+**収集すべき成果データ:**
+
+| カテゴリ | データ | 収集方法 | 用途 |
+|---------|--------|---------|------|
+| 検索パフォーマンス | Google検索順位 | GSC API（Phase 10） | ユーザーダッシュボード表示 |
+| 検索パフォーマンス | Google Discover掲載 | GSC API（Discover レポート） | 実績バッジ、マーケティング |
+| トラフィック | PV数、ユニークユーザー数 | Google Analytics 4 連携 | ダッシュボード、社会的証明 |
+| エンゲージメント | 平均滞在時間、直帰率 | GA4連携 | 記事品質指標 |
+| 外部評価 | 被リンク数 | Ahrefs/Moz API（有料） | 成長指標 |
+| SNS | シェア数、言及 | Social API連携 | バイラル指標 |
+
+**必要な実装:**
+
+1. **データ収集基盤:**
+```sql
+CREATE TABLE site_performance_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  metric_date DATE NOT NULL,
+  -- GSC Data
+  total_impressions INTEGER,
+  total_clicks INTEGER,
+  avg_position DECIMAL(5,2),
+  discover_impressions INTEGER,
+  discover_clicks INTEGER,
+  -- GA4 Data
+  page_views INTEGER,
+  unique_visitors INTEGER,
+  avg_session_duration INTEGER,  -- seconds
+  bounce_rate DECIMAL(5,2),
+  -- Computed
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(site_id, metric_date)
+);
+
+CREATE TABLE achievement_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  achievement_type VARCHAR(50) NOT NULL,
+  -- 'first_discover', 'pv_1000', 'ranking_top10', etc.
+  achieved_at TIMESTAMP DEFAULT NOW(),
+  metadata JSONB
+);
+```
+
+2. **トラッキング対象と閾値:**
+
+| 達成バッジ | 条件 | 表示場所 |
+|-----------|------|---------|
+| 🎉 Google Discover初掲載 | Discover impressions > 0 | ダッシュボード、通知 |
+| 📈 1,000 PV達成 | 累計PV >= 1,000 | ダッシュボード |
+| 🏆 検索TOP10入り | 任意キーワードで順位 <= 10 | 記事詳細、ダッシュボード |
+| ⭐ 月間10,000 PV | 月間PV >= 10,000 | プロフィール、LP掲載許可 |
+| 🚀 バイラル記事 | 1記事で1日1,000 PV以上 | 特別通知 |
+
+3. **集計・表示フロー:**
+```
+Daily Cron (Inngest):
+  1. GSC API → site_performance_metrics
+  2. GA4 API → site_performance_metrics
+  3. 閾値チェック → achievement_logs
+  4. 達成時 → メール通知 + ダッシュボード更新
+
+User Dashboard:
+  - 過去30日のパフォーマンスグラフ
+  - 獲得バッジ一覧
+  - 「あなたの記事は○○人に読まれました」
+
+LP/Marketing:
+  - 集計: 「累計○○PV達成」
+  - ユーザー許可制で成功事例掲載
+```
+
+**実装フェーズ:**
+
+| Phase | 実装内容 |
+|-------|---------|
+| Phase 10 | GSC連携（検索パフォーマンス基盤） |
+| Phase 10.5（新設） | GA4連携、achievement_logs、バッジシステム |
+| Phase 13+ | マーケティング活用、LP掲載、社会的証明強化 |
+
+**対応期限:** Phase 10 設計時に詳細化必須
+
+**リスク:**
+- GA4連携なしではPV数が取得できない
+- ユーザーがGA4を設定しない場合のフォールバック未定義
+- 成果データのプライバシーポリシー対応が必要
+
+---
+
+#### MA-024: 独自ドメイン時のGSC/GA OAuth連携が未定義（重要度: 中）
+
+**問題箇所:** `phases/Phase8_CustomDomain.md`
+
+**問題:**
+Phase 8では独自ドメインのDNS設定・SSL発行のみが定義されており、GSC/GA連携の認証フローが未定義。
+
+**MVPとの違い:**
+
+| 項目 | MVP（サブドメイン） | Phase 8（独自ドメイン） |
+|------|-------------------|----------------------|
+| GSC認証 | Argo Noteが親ドメイン認証済み | ユーザーのドメイン所有権証明が必要 |
+| GA4連携 | Argo Note管理のGA4に自動登録 | ユーザーのGA4プロパティ or 新規作成が必要 |
+| データ取得 | API経由で一括取得可能 | OAuth認証でユーザー許可が必要 |
+
+**必要な実装（Phase 8に追加すべきタスク）:**
+
+1. **GSC OAuth連携:**
+```
+ユーザーフロー:
+1. 独自ドメイン設定完了
+2. 「Google Search Consoleと連携」ボタン
+3. Google OAuth同意画面（Search Console API権限）
+4. 認証トークン保存（users テーブルに追加カラム）
+5. GSC APIでドメインプロパティを自動追加（可能な場合）
+   または手動追加の案内
+```
+
+2. **GA4 OAuth連携:**
+```
+ユーザーフロー:
+1. 「Google Analyticsと連携」ボタン
+2. Google OAuth同意画面（Analytics API権限）
+3. 既存GA4プロパティ選択 or 新規作成
+4. 測定IDを取得し、WordPressに自動埋め込み
+```
+
+3. **データベース拡張:**
+```sql
+ALTER TABLE users ADD COLUMN google_oauth_token TEXT;  -- 暗号化
+ALTER TABLE users ADD COLUMN google_oauth_refresh TEXT;  -- 暗号化
+ALTER TABLE users ADD COLUMN google_oauth_scope VARCHAR(500);
+
+ALTER TABLE sites ADD COLUMN gsc_property_url VARCHAR(255);
+ALTER TABLE sites ADD COLUMN ga4_property_id VARCHAR(50);
+ALTER TABLE sites ADD COLUMN ga4_measurement_id VARCHAR(20);
+```
+
+4. **DNS TXTレコードの活用:**
+```
+独自ドメイン認証時に設定するTXTレコード:
+  _argonote.example.com → verify={token}
+
+このTXTレコードをGSCのドメイン認証にも活用可能
+（ただしGSC側の形式に合わせる必要あり）
+```
+
+**Phase 8への統合理由:**
+- ドメイン設定とGSC/GA連携は「ドメイン所有権」という共通概念
+- ユーザー体験として一度にまとめて設定する方が自然
+- DNS TXTレコード設定を共有できる可能性
+
+**対応期限:** Phase 8 設計時
+
+**注意:**
+- この機能は「ユーザーの独自ドメインをArgo NoteのMultisiteにマッピングする」ためのもの
+- ユーザーが既に所有している外部WordPressに接続する機能ではない
+
+---
+
 ## 10. 推奨される整合性向上アクション
 
 ### 🔴 高優先度
@@ -1573,6 +1740,8 @@ Phase 0 → 0.5 → 1 → 2 → 3 → 4 → 5 → 6
 | ID | アクション | 効果 | 実施時期 |
 |----|-----------|------|---------|
 | MA-021 | Phase 13 の実装基準を AND/OR で明確化 | 意思決定の確定 | Phase 6 後 |
+| MA-023 | 成果トラッキングシステム設計（GA4連携、バッジシステム） | サービス価値証明 | Phase 10 設計時 |
+| MA-024 | 独自ドメイン時のGSC/GA OAuth連携設計 | 独自ドメインユーザーのデータ取得 | Phase 8 設計時 |
 | - | DEVELOPMENT_ROADMAP に詳細フェーズリンク補強 | ナビゲーション改善 | ドキュメント完成時 |
 | - | 競合分析（AutoBlogging.ai）の定期更新計画 | 市場動向把握 | Phase 7 前 |
 
@@ -1602,6 +1771,19 @@ Phase 0 → 0.5 → 1 → 2 → 3 → 4 → 5 → 6
 
 - [ ] MA-013: Multisite 監視閾値を監視ツールに設定
 - [ ] 復旧手順書の事前作成
+
+### 成果証明・マーケティング
+
+- [ ] MA-023: 成果トラッキングシステムの詳細設計（Phase 10設計時）
+- [ ] MA-023: GA4連携方針の確定（ユーザー設定 or サービス側設定）
+- [ ] MA-023: 達成バッジ・通知システムのUI設計
+
+### 独自ドメイン対応（Phase 8）
+
+- [ ] MA-024: GSC OAuth連携フロー設計
+- [ ] MA-024: GA4 OAuth連携フロー設計
+- [ ] MA-024: google_oauth_token等のDBスキーマ追加
+- [ ] MA-024: DNS TXTレコードのGSC認証への活用検討
 
 ---
 
