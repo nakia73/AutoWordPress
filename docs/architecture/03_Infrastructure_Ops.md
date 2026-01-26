@@ -71,7 +71,7 @@
 wp site create --slug=newclient --title="New Client Blog" --email=admin@example.com
 ```
 
-所要時間: **0.1秒以下**（Dockerコンテナ起動の30-60秒と比較して圧倒的に高速）
+所要時間: **0.1秒以下**
 
 ## セキュリティと隔離
 
