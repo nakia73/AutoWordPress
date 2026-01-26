@@ -3,6 +3,7 @@
 
 import { inngest } from '../client';
 import { prisma } from '@/lib/prisma/client';
+import { encrypt } from '@/lib/crypto';
 
 export const provisionBlog = inngest.createFunction(
   {
@@ -11,7 +12,7 @@ export const provisionBlog = inngest.createFunction(
   },
   { event: 'blog/provision' },
   async ({ event, step }) => {
-    const { siteId, userId, subdomain, theme } = event.data;
+    const { siteId, subdomain, theme } = event.data;
 
     // Step 1: Update site status to provisioning
     await step.run('update-status-provisioning', async () => {
@@ -50,12 +51,15 @@ export const provisionBlog = inngest.createFunction(
 
     // Step 5: Update site status to active
     await step.run('update-status-active', async () => {
+      // P-002: Encrypt wpApiToken before storing
+      const encryptedToken = encrypt(wpSite.wpApiToken);
+
       await prisma.site.update({
         where: { id: siteId },
         data: {
           status: 'active',
           wpAdminUrl: wpSite.wpAdminUrl,
-          wpApiToken: wpSite.wpApiToken, // Should be encrypted
+          wpApiToken: encryptedToken,
         },
       });
     });

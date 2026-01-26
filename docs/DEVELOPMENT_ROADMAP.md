@@ -54,6 +54,7 @@ docs/
 | [Phase 4](./phases/Phase4_Automation.md) | Automation | Hands-Free | **スケジュール自動化・通知（MVP必須）** | Week 3 |
 | [Phase 5](./phases/Phase5_Monetization.md) | Monetization | Sustainability | Stripe決済・サブスクリプション管理 | Week 4 |
 | [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | ベータリリース・フィードバック収集 | Week 4 |
+| Phase 6.1 | UI Upgrade | Polish | MockupのリッチUIデザインをAppに移植 | Week 4+ |
 
 ### 成長フェーズ（Phase 7-15）【ベータフィードバック後】
 
@@ -93,7 +94,7 @@ docs/
 
 | レイヤー | 技術 | 備考 |
 |---------|------|------|
-| Frontend | Next.js 14+, TypeScript, Tailwind CSS, Shadcn/UI | |
+| Frontend | Next.js 16+, TypeScript, Tailwind CSS v4, Shadcn/UI, Framer Motion | |
 | Backend | Next.js API Routes, Prisma ORM | |
 | Auth | **Supabase Auth** | Google OAuth対応 |
 | Database | **Supabase (PostgreSQL)** + MariaDB (WP) | 2DB構成 |
@@ -147,6 +148,7 @@ docs/
 - [Phase 4: Automation](./phases/Phase4_Automation.md) - スケジュール自動化（MVP必須）
 - [Phase 5: Monetization](./phases/Phase5_Monetization.md) - 収益化
 - [Phase 6: MVP Launch](./phases/Phase6_MVPLaunch.md) - MVPリリース
+- **Phase 6.1: UI Upgrade** (✅ 2026-01-27 完了) - リッチUIデザイン移植
 
 **成長フェーズ:**
 - [Phase 7: Visual](./phases/Phase7_Visual.md) - 画像自動生成

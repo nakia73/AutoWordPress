@@ -117,6 +117,44 @@
 
 ---
 
+---
+
+## Phase 6.1: UI Upgrade (✅ 完了)
+
+**実施日:** 2026-01-27
+**テーマ:** Polish & Luxury Experience
+**ゴール:** MockupのリッチUIデザインをAppに移植し、プレミアムな印象を与えるUIを実現。
+
+### 実装内容
+
+| 項目 | 変更前 | 変更後 |
+|------|--------|--------|
+| カラースキーム | Blue-600 (#2563eb) | Gold (#D4AF37) ラグジュアリーテーマ |
+| UIコンポーネント数 | 4個 | 10個（Dialog, Sheet, Progress等追加） |
+| アニメーション | なし | Framer Motion（ホバー、遷移、shimmer） |
+| レイアウト | 横型ナビゲーション | サイドバーナビゲーション |
+| ダークモード | OS連動 | ダーク基調のラグジュアリーテーマ |
+
+### 追加されたファイル
+
+- `src/components/ui/progress.tsx`
+- `src/components/ui/skeleton.tsx`
+- `src/components/ui/tabs.tsx`
+- `src/components/ui/dialog.tsx`
+- `src/components/ui/sheet.tsx`
+- `src/components/ui/label.tsx`
+- `src/components/dashboard/sidebar.tsx`
+
+### 主要な変更
+
+1. **globals.css:** 380+ 行の完全リニューアル（ゴールドテーマ、アニメーション、エフェクト）
+2. **Sidebar:** 折りたたみ対応、Framer Motionアニメーション、モバイルSheet連携
+3. **Button/Card/Badge:** shadcn/ui準拠、CVA対応、asChild対応
+
+**詳細:** [Phase 6.1 UI Upgrade Plan](../../app/.claude/phase-6.1-ui-upgrade.md)
+
+---
+
 ## 7. 次のステップ
 
 MVPの検証が完了したら、**Phase 7: Visual** 以降でフィードバックを反映しながら機能拡張を行う。

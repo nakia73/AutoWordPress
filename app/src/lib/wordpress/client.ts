@@ -6,6 +6,7 @@ import type {
   WPPostResponse,
   WPPostStatus,
 } from '@/types';
+import { safeDecrypt } from '@/lib/crypto';
 
 type WPClientOptions = {
   baseUrl: string;
@@ -231,14 +232,22 @@ export class WordPressAPIError extends Error {
 }
 
 // Factory function to create client from site data
+// P-002: wpApiToken is now encrypted in the database
 export function createWordPressClient(site: {
   wpSiteUrl: string;
   wpUsername: string;
   wpApiToken: string;
 }): WordPressClient {
+  // Decrypt the token (safeDecrypt handles both encrypted and plain tokens)
+  const decryptedToken = safeDecrypt(site.wpApiToken);
+
+  if (!decryptedToken) {
+    throw new Error('Failed to decrypt WordPress API token');
+  }
+
   return new WordPressClient({
     baseUrl: site.wpSiteUrl,
     username: site.wpUsername,
-    applicationPassword: site.wpApiToken,
+    applicationPassword: decryptedToken,
   });
 }

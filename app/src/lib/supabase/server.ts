@@ -1,7 +1,7 @@
 // Argo Note - Supabase Server Client
 // For server-side operations (API Routes, Server Components)
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function createServerSupabaseClient() {

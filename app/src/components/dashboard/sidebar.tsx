@@ -171,7 +171,7 @@ function SidebarContent({
           {user.avatarUrl ? (
             <img
               src={user.avatarUrl}
-              alt={user.name || user.email}
+              alt={user.name || user.email || 'User avatar'}
               className="h-8 w-8 rounded-full ring-2 ring-primary/20"
             />
           ) : (

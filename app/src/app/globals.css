@@ -131,6 +131,7 @@
 }
 
 .gold-text-gradient {
+  color: #D4AF37; /* Fallback for browsers that don't support background-clip: text */
   background: linear-gradient(135deg, #B8860B 0%, #D4AF37 25%, #F4D03F 50%, #D4AF37 75%, #B8860B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -154,6 +155,7 @@
 }
 
 .gold-text-shimmer {
+  color: #D4AF37; /* Fallback for browsers that don't support background-clip: text */
   background: linear-gradient(
     110deg,
     #B8860B 0%,

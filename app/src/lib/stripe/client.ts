@@ -3,10 +3,31 @@
 
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-  typescript: true,
-});
+// Lazy initialization to avoid build-time errors when env vars are not set
+let stripeInstance: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+    }
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: '2025-12-15.clover',
+      typescript: true,
+    });
+  }
+  return stripeInstance;
+}
+
+// Legacy export for backward compatibility (will throw at runtime if key not set)
+export const stripe = {
+  get checkout() { return getStripe().checkout; },
+  get customers() { return getStripe().customers; },
+  get subscriptions() { return getStripe().subscriptions; },
+  get billingPortal() { return getStripe().billingPortal; },
+  get webhooks() { return getStripe().webhooks; },
+};
 
 // Subscription Plans
 export const SUBSCRIPTION_PLANS = {

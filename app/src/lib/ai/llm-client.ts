@@ -1,7 +1,7 @@
 // Argo Note - LLM Client
 // Gemini via LiteLLM proxy
 
-import type { LLMCompletionRequest, LLMCompletionResponse, LLMMessage } from '@/types';
+import type { LLMCompletionResponse, LLMMessage } from '@/types';
 
 const LLM_MODEL = process.env.LLM_MODEL || 'gemini/gemini-2.0-flash-exp';
 const LLM_TIMEOUT = parseInt(process.env.LLM_TIMEOUT_SECONDS || '30') * 1000;
@@ -96,7 +96,7 @@ export class LLMClient {
       }
 
       return JSON.parse(jsonStr.trim()) as T;
-    } catch (error) {
+    } catch {
       throw new Error(`Failed to parse LLM JSON response: ${response}`);
     }
   }

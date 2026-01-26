@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
           </p>
         </div>
 
-        <OnboardingWizard userId={user.id} />
+        <OnboardingWizard />
       </div>
     </div>
   );

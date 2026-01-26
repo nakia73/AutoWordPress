@@ -6,13 +6,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type OnboardingWizardProps = {
-  userId: string;
-};
-
 type Step = 'subdomain' | 'product' | 'processing';
 
-export default function OnboardingWizard({ userId }: OnboardingWizardProps) {
+export default function OnboardingWizard() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('subdomain');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +56,7 @@ export default function OnboardingWizard({ userId }: OnboardingWizardProps) {
       }
 
       setStep('product');
-    } catch (err) {
+    } catch {
       setError('Failed to check subdomain availability. Please try again.');
     } finally {
       setIsLoading(false);

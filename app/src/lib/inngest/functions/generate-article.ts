@@ -14,7 +14,7 @@ export const generateArticle = inngest.createFunction(
   },
   { event: 'article/generate' },
   async ({ event, step }) => {
-    const { articleId, productId, targetKeyword, clusterId } = event.data;
+    const { articleId, targetKeyword } = event.data;
 
     const startTime = Date.now();
 

@@ -31,7 +31,7 @@ export default function LoginForm() {
         setError(error.message);
         setIsLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }

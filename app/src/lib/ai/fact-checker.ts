@@ -141,7 +141,7 @@ Based on these sources, verify the claim.`;
       try {
         const result = await this.verifyClaim(claim);
         results.push(result);
-      } catch (error) {
+      } catch {
         // If verification fails, mark as unverified
         results.push({
           claim: claim.claim,

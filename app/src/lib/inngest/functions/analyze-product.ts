@@ -13,7 +13,7 @@ export const analyzeProduct = inngest.createFunction(
   },
   { event: 'product/analyze' },
   async ({ event, step }) => {
-    const { productId, mode, url, answers, keywords } = event.data;
+    const { productId, url, answers } = event.data;
 
     // Get product details
     const product = await step.run('get-product', async () => {

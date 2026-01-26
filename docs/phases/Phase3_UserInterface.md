@@ -73,11 +73,24 @@ AIというブラックボックスを、ユーザーが安心してコントロ
 
 | コンポーネント | 技術 |
 |---------------|------|
-| Framework | Next.js 14+ (App Router) |
+| Framework | Next.js 16+ (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS + Shadcn/UI |
+| Styling | Tailwind CSS v4 + Shadcn/UI + Framer Motion |
+| UI Components | Radix UI (@radix-ui/react-*) |
 | State | Zustand + TanStack Query |
 | Auth | **Supabase Auth**（Google OAuth対応）|
+
+### Phase 6.1 UI Upgrade (2026-01-27 完了)
+
+本フェーズでUIの大幅なアップグレードを実施。詳細は [Phase 6.1 UI Upgrade Plan](../../app/.claude/phase-6.1-ui-upgrade.md) を参照。
+
+**主な変更点:**
+
+- **カラースキーム:** Blue-600 → Gold (#D4AF37) ラグジュアリーテーマ
+- **レイアウト:** 横型ナビ → サイドバーナビゲーション
+- **アニメーション:** Framer Motion による豊富なインタラクション
+- **コンポーネント:** 4個 → 10個に拡充（Dialog, Sheet, Progress, Skeleton, Tabs, Label追加）
+- **ダークモード:** OSデフォルト対応 → ダークモード基調のラグジュアリーテーマ
 
 ---
 

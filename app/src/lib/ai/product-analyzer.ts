@@ -11,9 +11,6 @@ import type {
   PhaseCResult,
   PhaseDResult,
   PhaseEResult,
-  KeywordData,
-  CompetitorData,
-  ArticleClusterPlan,
 } from '@/types';
 
 type AnalyzeOptions = {
@@ -199,7 +196,7 @@ Language: ${options.language || 'en'}
     let competitorContext = '';
     const seenUrls = new Set<string>();
 
-    for (const [query, results] of searchResults) {
+    for (const [, results] of searchResults) {
       for (const result of results.results) {
         if (!seenUrls.has(result.url)) {
           seenUrls.add(result.url);

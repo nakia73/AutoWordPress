@@ -25,7 +25,7 @@ type GenerationOptions = {
 
 export class ArticleGenerator {
   // Step 1: Research the topic
-  async research(keyword: string, productName: string) {
+  async research(keyword: string) {
     const queries = RESEARCH_QUERIES.forKeyword(keyword);
 
     // Perform searches
@@ -133,7 +133,7 @@ Content Summary: ${content.slice(0, 1000)}...
   // Full article generation pipeline
   async generate(options: GenerationOptions): Promise<ArticleContent> {
     // Step 1: Research
-    const research = await this.research(options.targetKeyword, options.productName);
+    const research = await this.research(options.targetKeyword);
 
     // Step 2: Generate outline
     const outline = await this.generateOutline(options);

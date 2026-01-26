@@ -48,71 +48,91 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure user exists in database
-    await prisma.user.upsert({
-      where: { id: user.id },
-      update: {},
-      create: {
-        id: user.id,
-        email: user.email!,
-        name: user.user_metadata?.full_name || user.user_metadata?.name,
-      },
-    });
+    // P-001: Use transaction for atomicity
+    const { site, product, provisionJob, analysisJob } = await prisma.$transaction(async (tx) => {
+      // Ensure user exists in database
+      await tx.user.upsert({
+        where: { id: user.id },
+        update: {},
+        create: {
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata?.full_name || user.user_metadata?.name,
+        },
+      });
 
-    // Create site
-    const site = await prisma.site.create({
-      data: {
-        userId: user.id,
-        slug: subdomain,
-        status: 'provisioning',
-      },
-    });
+      // Create site
+      const site = await tx.site.create({
+        data: {
+          userId: user.id,
+          slug: subdomain,
+          status: 'provisioning',
+        },
+      });
 
-    // Create product
-    const product = await prisma.product.create({
-      data: {
-        userId: user.id,
-        siteId: site.id,
-        url: productUrl || `https://${subdomain}.argonote.app`,
-        name: productName,
-        description: productDescription,
-      },
-    });
+      // Create product
+      const product = await tx.product.create({
+        data: {
+          userId: user.id,
+          siteId: site.id,
+          url: productUrl || `https://${subdomain}.argonote.app`,
+          name: productName,
+          description: productDescription,
+        },
+      });
 
-    // Create provisioning job
-    const provisionJob = await prisma.job.create({
-      data: {
-        jobType: 'PROVISION_BLOG',
-        payload: {
-          type: 'PROVISION_BLOG',
-          data: {
-            site_id: site.id,
-            user_id: user.id,
-            subdomain: subdomain,
-            theme: 'generatepress',
+      // Create provisioning job
+      const provisionJob = await tx.job.create({
+        data: {
+          jobType: 'PROVISION_BLOG',
+          payload: {
+            type: 'PROVISION_BLOG',
+            data: {
+              site_id: site.id,
+              user_id: user.id,
+              subdomain: subdomain,
+              theme: 'generatepress',
+            },
+          },
+          status: 'pending',
+        },
+      });
+
+      // Create analysis job
+      const analysisJob = await tx.job.create({
+        data: {
+          jobType: 'ANALYZE_PRODUCT',
+          payload: {
+            type: 'ANALYZE_PRODUCT',
+            data: {
+              product_id: product.id,
+              mode: productUrl ? 'url' : 'interactive',
+              url: productUrl || undefined,
+            },
+          },
+          status: 'pending',
+        },
+      });
+
+      // Log activity
+      await tx.userActivityLog.create({
+        data: {
+          userId: user.id,
+          action: 'onboarding.complete',
+          targetType: 'site',
+          targetId: site.id,
+          metadata: {
+            subdomain,
+            productName,
+            hasProductUrl: !!productUrl,
           },
         },
-        status: 'pending',
-      },
+      });
+
+      return { site, product, provisionJob, analysisJob };
     });
 
-    // Create analysis job
-    const analysisJob = await prisma.job.create({
-      data: {
-        jobType: 'ANALYZE_PRODUCT',
-        payload: {
-          type: 'ANALYZE_PRODUCT',
-          data: {
-            product_id: product.id,
-            mode: productUrl ? 'url' : 'interactive',
-            url: productUrl || undefined,
-          },
-        },
-        status: 'pending',
-      },
-    });
-
-    // Trigger Inngest events
+    // Trigger Inngest events (outside transaction - these are idempotent)
     await Promise.all([
       inngest.send({
         name: 'blog/provision',
@@ -132,21 +152,6 @@ export async function POST(request: NextRequest) {
         },
       }),
     ]);
-
-    // Log activity
-    await prisma.userActivityLog.create({
-      data: {
-        userId: user.id,
-        action: 'onboarding.complete',
-        targetType: 'site',
-        targetId: site.id,
-        metadata: {
-          subdomain,
-          productName,
-          hasProductUrl: !!productUrl,
-        },
-      },
-    });
 
     return NextResponse.json({
       success: true,
