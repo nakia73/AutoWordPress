@@ -3,7 +3,7 @@
 
 import { llmClient, ARTICLE_PROMPTS } from './llm-client';
 import { tavilyClient, RESEARCH_QUERIES } from './tavily-client';
-import type { ArticleContent, ArticleType, ARTICLE_WORD_COUNTS } from '@/types';
+import type { ArticleContent, ArticleType } from '@/types';
 
 type ArticleOutline = {
   title: string;
