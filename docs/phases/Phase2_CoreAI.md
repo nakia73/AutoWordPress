@@ -20,10 +20,12 @@
 | **Tavily → LLM記事生成** | 記事コンセプトをTavily APIで検索し、取得情報をもとにLLMで記事生成 | ✅ 流用 |
 | **Nanobana Pro画像生成** | H2見出しごとのセクションを参照し、見出し画像を生成 | ✅ MVPに含める |
 
-**MVPで後回しにするもの:**
+**MVPで実装するもの:**
 - キーワード調査API（Keywords Everywhere / DataForSEO）
 - 競合分析API
-- Firecrawl（URL自動クロール）
+
+**MVPで採用判断が必要なもの:**
+- Firecrawl（URL自動クロール）※A/Bモックアップ検証後に採用判断
 
 ---
 
@@ -41,7 +43,7 @@
 - ユーザーがプロダクト情報（名称、概要、ターゲット等）を入力
 - 入力情報をもとにLLMでペルソナ・キーワード候補を生成
 
-**将来拡張（MVP後）:**
+**採用決定後（MVP内でも適用）:**
 - Firecrawl API / Jina Readerを使用したURL自動クロール
 - URLからサイト全体の情報を自動抽出
 
@@ -75,12 +77,12 @@
 | **FAQ** | 検索ユーザーの直接的な疑問に回答（構造化データ付き） | 1,500〜2,500 |
 | **Glossary** | 業界用語の解説、専門用語でのSEO流入 | 1,000〜2,000 |
 
-**品質管理:** 生成した記事に対し、再度LLMで「事実確認（Fact Check）」を行い、根拠となる参照URLを記事末尾に付与。
+**品質管理:** MVPではFact Check機能は未実装。参照ソースを明示し、ユーザーが内容を確認できる導線を用意する。Fact CheckはMVP後にシステム側で実施する。
 
 ### Step 4: WordPress REST API 連携
 
 - 生成された記事（HTML形式）を、WordPressのREST API経由で各ユーザーのサイトへ投稿。
-- 初期設定として「下書き」状態で投稿し、ユーザーが内容を確認できるようにする。
+- デフォルトは自動公開で投稿（ユーザー設定で下書きに変更可能）。
 
 ```typescript
 // WordPress REST API経由で投稿
@@ -109,7 +111,7 @@ const response = await fetch(`https://${siteSlug}.argonote.app/wp-json/wp/v2/pos
 | Image Generation | **Nanobana Pro**（見出し画像生成） | ✅ |
 | Worker/Queue | **Inngest** (長時間処理・自動リトライ対応) | ✅ |
 | Database | **Supabase (PostgreSQL)** | ✅ |
-| Web Scraping | Firecrawl API / Jina Reader | 後回し |
+| Web Scraping | Firecrawl API / Jina Reader | A/Bモックアップ検証後に採用判断 |
 
 ---
 
@@ -134,7 +136,7 @@ const response = await fetch(`https://${siteSlug}.argonote.app/wp-json/wp/v2/pos
 
 ## 6. 成功基準
 
-- プロダクトURL入力から10分以内に、WordPressに「読んで価値のある」記事が投稿されていること。
+- プロダクトURL入力から20分以内に、WordPressに「読んで価値のある」記事が投稿されていること。
 - 記事内に適切な見出し、リスト、参照URLが含まれていること。
 
 ---

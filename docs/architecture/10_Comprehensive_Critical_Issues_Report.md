@@ -40,16 +40,16 @@
 
 | 主張 | 実態 | ギャップ |
 |------|------|---------|
-| 「放置OK」「全自動」 | Fact Checkはユーザー責任 | 🔴 矛盾 |
+| 「放置OK」「全自動」 | Fact CheckはMVP未実装（MVP後にシステム実施） | 🔴 矛盾 |
 | 自動公開 | DB DEFAULT 'draft' | 🔴 矛盾 |
 | シームレス体験 | WP別途ログイン必要 | 🟠 |
 | 完全自動 | エラー時手動介入必要 | 🟡 |
 
 **発生箇所:**
 - `CONCEPT_DECISIONS.md G5/J4`: 自動公開がデフォルト
-- `02_Backend_Database.md:183`: `publish_mode VARCHAR(20) DEFAULT 'draft'`
+- `02_Backend_Database.md:183`: `publish_mode VARCHAR(20) DEFAULT 'publish'`
 - `02_Backend_Database.md:134`: `status VARCHAR(50) DEFAULT 'draft'`
-- `Phase2_CoreAI.md:83-84`: 下書き状態で投稿
+- `Phase2_CoreAI.md:83-84`: デフォルトは自動公開（ユーザー設定で下書きに変更可能）
 
 **根本的問い:** 「放置OK」で放置できないのは矛盾ではないか？
 
@@ -66,22 +66,22 @@
 
 | 機能 | MVPでの状態 | "Fully"の観点 |
 |------|-------------|---------------|
-| URLクロール | ❌ 後回し（Firecrawl） | 不完全 |
-| AI画像生成 | ❌ Unsplash/Pexels | 不完全 |
+| URLクロール | A/Bモックアップ検証中（採用方式未決） | 不確定 |
+| AI画像生成 | ✅ Nanobana Pro | 完備 |
 | SSO | ❌ Phase 9 | 不完全 |
 | カスタムドメイン | ❌ Phase 8 | 不完全 |
 | モデル選択 | ❌ Phase 12 | 不完全 |
 
 **発生箇所:**
-- `Phase2_CoreAI.md:26-27`: Firecrawl後回し
+- `Phase2_CoreAI.md:26-27`: A/Bモックアップ検証後に採用判断
 - `05_Sequence_Diagrams.md:17-18`: 方式A（URLクロール）記載
-- `CONCEPT_DECISIONS.md G8`: MVP: Unsplash/Pexels
+- `CONCEPT_DECISIONS.md G8`: MVP: Nanobana Pro
 
 **根本的問い:** MVPで"Fully"と訴求できる根拠は？
 
 **推奨対応:**
-1. LP/訴求文言を「自動化への第一歩」など現実的な表現に調整
-2. または、方式Aを"Coming Soon"として明示
+1. A/Bモックアップを作成し、Xで反応を検証
+2. 採用方式決定後、LP/訴求文言を現実的な表現に調整
 
 ---
 
@@ -182,7 +182,7 @@
 | - | ❌ WPカスタマイズ |
 
 **発生箇所:**
-- `04_AI_Pipeline.md:160`: Fact Checkはユーザー責任
+- `04_AI_Pipeline.md:160`: Fact CheckはMVP未実装（MVP後にシステム実施）
 - `09_Critical_Issues_Report.md CV-001`: 放置OK vs ユーザー責任
 
 **推奨対応:**
@@ -260,15 +260,15 @@
 
 | フィールド | 定義状況 |
 |-----------|---------|
-| `products.analysis_result` | ❌ 未定義 |
-| `jobs.payload` | ❌ 未定義 |
+| `products.analysis_result` | ✅ 定義済み |
+| `jobs.payload` | ✅ 定義済み |
 | `schedule_jobs.generation_details` | ❌ 未定義 |
 
 **発生箇所:**
 - `02_Backend_Database.md:110`: analysis_result JSONB
 - `02_Backend_Database.md:141`: payload JSONB
 
-**推奨対応:** 08_Integration_Risk_Reportの型定義を採用
+**対応状況:** `products.analysis_result` と `jobs.payload` は 08_Integration_Risk_Report の型定義を採用済み。`schedule_jobs.generation_details` は未定義。
 
 ---
 
@@ -276,8 +276,7 @@
 
 **イテレーション 12: 処理フロー不明確**
 
-08_Integration_Risk_Reportで対応方針記載済み。
-実装時に厳密に適用すること。
+**対応状況:** 08_Integration_Risk_Reportで境界を確定済み。非同期はジョブ追跡/通知で可視化し、APIは即時ACKを返す方針。
 
 ---
 
@@ -285,7 +284,9 @@
 
 **イテレーション 13: ユーザー通知フロー**
 
-08_Integration_Risk_Reportで対応方針記載済み。
+08_Integration_Risk_Reportで対応方針確定済み。
+ユーザーが理由を理解できないエラー落ちは許容しない方針。
+表示レベルは「カテゴリ + 具体原因 + 次アクション」。
 
 **追加発見:**
 - Phase3_UserInterface.mdにエラー表示UIの詳細なし
@@ -293,26 +294,25 @@
 
 ---
 
-### 🔴 FP50-014: DBスキーマ矛盾（新規発見）
+### 🔴 FP50-014: DBスキーマ整合性
 
 **イテレーション 14: publish_mode / status デフォルト値**
 
 ```sql
 -- 02_Backend_Database.md:183
-publish_mode VARCHAR(20) DEFAULT 'draft',   -- CONCEPT_DECISIONSと矛盾
+publish_mode VARCHAR(20) DEFAULT 'publish',
 
 -- 02_Backend_Database.md:134
-status VARCHAR(50) DEFAULT 'draft'  -- CONCEPT_DECISIONSと矛盾
+status VARCHAR(50) DEFAULT 'draft'
 ```
 
 **CONCEPT_DECISIONS G5/J4:**
 > 自動公開がデフォルト（ユーザー選択可能）
 
-**推奨対応:**
+**決定事項:**
 ```sql
--- 修正案
 publish_mode VARCHAR(20) DEFAULT 'publish',
-status VARCHAR(50) DEFAULT 'generating'  -- ワークフロー適切な初期値
+status VARCHAR(50) DEFAULT 'draft'  -- 生成開始時にアプリ層で generating へ遷移
 ```
 
 ---
@@ -412,7 +412,7 @@ status VARCHAR(50) DEFAULT 'generating'  -- ワークフロー適切な初期値
 |------|------|
 | Gemini API | $0.01-0.03/1K token（推定） |
 | Tavily API | プラン依存 |
-| Unsplash | 無料（API制限あり） |
+| Nanobana Pro | 要見積 |
 | インフラ | $24/月（100ユーザーまで） |
 
 **発生箇所:**
@@ -559,17 +559,17 @@ status VARCHAR(50) DEFAULT 'generating'  -- ワークフロー適切な初期値
 
 | 方式 | MVP対応 | UI表示 |
 |------|---------|--------|
-| A: URLクロール | ❌ | ❓ |
-| B: インタラクティブ | ✅ | ❓ |
-| C: 競合調査 | ✅ | ❓ |
+| A: URLクロール | 検証中 | A/Bテスト結果次第 |
+| B: インタラクティブ | 検証中 | A/Bテスト結果次第 |
+| C: 競合調査 | 未決 | 別途判断 |
 
 **発生箇所:**
 - `05_Sequence_Diagrams.md:15-19`
 - `09_Critical_Issues_Report.md UX-001`
 
 **推奨対応:**
-1. MVP UIでは方式B/Cのみ表示
-2. 方式Aは「Coming Soon」バッジ
+1. A/Bモックアップを作成し、Xで反応を検証
+2. 採用方式決定後、MVP UIに表示する方式を確定
 
 ---
 
@@ -580,7 +580,7 @@ status VARCHAR(50) DEFAULT 'generating'  -- ワークフロー適切な初期値
 | ドキュメント | 主張 |
 |-------------|------|
 | C2 | 3分は根拠なし |
-| Phase6 | 10分以内に完了 |
+| Phase6 | 20分以内に完了 |
 
 **推奨対応:**
 - 実測に基づく現実的な時間を設定
@@ -616,7 +616,7 @@ Dashboard → "記事を編集" → WP管理画面（SSO）→ 編集
 | 再実行ボタン | ❓ 未記載 |
 
 **推奨対応:**
-1. Phase3_UserInterface.mdにジョブ管理UIを追加
+1. Phase3_UserInterface.mdにジョブ管理UIを追加（理由が分かる失敗詳細を必須化）
 
 ---
 
@@ -801,7 +801,7 @@ Dashboard → "記事を編集" → WP管理画面（SSO）→ 編集
 |--------|------|
 | AI生成の不適切内容 | ❓ |
 | 法的リスク（著作権等） | 利用規約でユーザー責任 |
-| 誤情報拡散 | Fact Checkユーザー責任 |
+| 誤情報拡散 | Fact CheckはMVP未実装（MVP後にシステム実施） |
 
 **推奨対応:**
 1. LLMプロンプトにガードレール追加
@@ -894,10 +894,10 @@ Dashboard → "記事を編集" → WP管理画面（SSO）→ 編集
 
 | ID | 問題 | 修正対象 |
 |----|------|---------|
-| FP50-001/CI-001 | Fact Check責任矛盾 | Phase2_CoreAI.md |
+| FP50-001/CI-001 | Fact Check方針不一致 | Phase2_CoreAI.md |
 | FP50-001/CI-002 | 下書き/公開デフォルト矛盾 | Phase2_CoreAI.md |
 | FP50-014 | DBスキーマDEFAULT値矛盾 | 02_Backend_Database.md |
-| FP50-002/CI-003 | URLクロールMVP矛盾 | 05_Sequence_Diagrams.md |
+| FP50-002/CI-003 | 入力方式（A/B）採用決定 | 05_Sequence_Diagrams.md |
 
 ### MVP前に解決必須
 

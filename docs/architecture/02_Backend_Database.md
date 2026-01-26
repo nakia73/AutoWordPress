@@ -95,7 +95,7 @@ CREATE TABLE sites (
   slug VARCHAR(100) UNIQUE NOT NULL,          -- サブドメイン: xxx.argonote.app
   wp_admin_url VARCHAR(500),
   wp_api_token VARCHAR(500),                  -- AES-256-GCMで暗号化して保存
-  status VARCHAR(50) DEFAULT 'provisioning',  -- provisioning, active, suspended
+  status VARCHAR(50) DEFAULT 'pending',       -- pending, provisioning, provision_failed, active, suspended, deleted
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -103,11 +103,11 @@ CREATE TABLE sites (
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  site_id UUID REFERENCES sites(id),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   url VARCHAR(500) NOT NULL,
   name VARCHAR(255),
   description TEXT,
-  analysis_result JSONB,                      -- ペルソナ、キーワード等
+  analysis_result JSONB,                      -- ProductAnalysisResult（Phase A〜E 出力、下記参照）
   -- 画像設定 (Phase 7)
   image_style VARCHAR(50) DEFAULT 'illustration',
   color_theme VARCHAR(50) DEFAULT 'auto',
@@ -129,10 +129,12 @@ CREATE TABLE articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cluster_id UUID REFERENCES article_clusters(id) ON DELETE CASCADE,
   title VARCHAR(255),
-  content TEXT,                               -- HTML/Markdown
+  target_keyword VARCHAR(255),
+  search_intent VARCHAR(50),
+  content TEXT,                               -- HTML
   meta_description VARCHAR(160),
   article_type VARCHAR(50) DEFAULT 'article', -- article, faq, glossary
-  status VARCHAR(50) DEFAULT 'draft',         -- draft, published, archived
+  status VARCHAR(50) DEFAULT 'draft',         -- draft, generating, review, published, archived, failed
   wp_post_id INTEGER,
   published_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW()
@@ -141,8 +143,8 @@ CREATE TABLE articles (
 -- ジョブキュー (Phase 2)
 CREATE TABLE jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  job_type VARCHAR(50) NOT NULL,              -- ANALYZE_PRODUCT, GENERATE_ARTICLE, SYNC_WP
-  payload JSONB,
+  job_type VARCHAR(50) NOT NULL,              -- ANALYZE_PRODUCT, GENERATE_ARTICLE, SYNC_WP, PROVISION_BLOG
+  payload JSONB,                              -- JobPayload（下記参照）
   status VARCHAR(50) DEFAULT 'pending',       -- pending, processing, completed, failed
   priority INTEGER DEFAULT 0,
   attempts INTEGER DEFAULT 0,
@@ -154,6 +156,92 @@ CREATE TABLE jobs (
 );
 ```
 
+### JSONBスキーマ定義（確定）
+
+#### `products.analysis_result`（ProductAnalysisResult）
+
+```typescript
+type ProductAnalysisResult = {
+  phaseA: {
+    product_summary: string;
+    target_audience: string;
+    value_proposition: string;
+  };
+  phaseB: {
+    purchase_funnel: {
+      awareness: string[];
+      interest: string[];
+      consideration: string[];
+      decision: string[];
+    };
+  };
+  phaseC: {
+    keywords: Array<{
+      keyword: string;
+      search_volume: number;
+      difficulty: number;
+      intent: 'informational' | 'transactional' | 'navigational';
+    }>;
+  };
+  phaseD: {
+    competitors: Array<{
+      url: string;
+      title: string;
+      strengths: string[];
+      gaps: string[];
+    }>;
+  };
+  phaseE: {
+    clusters: Array<{
+      pillar_topic: string;
+      articles: Array<{
+        title: string;
+        target_keyword: string;
+        priority: number;
+      }>;
+    }>;
+  };
+};
+```
+
+#### `jobs.payload`（JobPayload）
+
+```typescript
+export type JobPayload =
+  | { type: 'ANALYZE_PRODUCT'; data: AnalyzeProductPayload }
+  | { type: 'GENERATE_ARTICLE'; data: GenerateArticlePayload }
+  | { type: 'SYNC_WP'; data: SyncWordPressPayload }
+  | { type: 'PROVISION_BLOG'; data: ProvisionBlogPayload };
+
+export type AnalyzeProductPayload = {
+  product_id: string;
+  mode: 'url' | 'interactive' | 'research';
+  url?: string;
+  answers?: Record<string, string>;
+  keywords?: string[];
+};
+
+export type GenerateArticlePayload = {
+  article_id: string;
+  product_id: string;
+  target_keyword: string;
+  cluster_id?: string;
+};
+
+export type SyncWordPressPayload = {
+  article_id: string;
+  site_id: string;
+  action: 'create' | 'update' | 'delete';
+};
+
+export type ProvisionBlogPayload = {
+  site_id: string;
+  user_id: string;
+  subdomain: string;
+  theme: string;
+};
+```
+
 ### 課金・決済（Phase 5）
 
 ```sql
@@ -162,8 +250,8 @@ CREATE TABLE billing_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   stripe_invoice_id VARCHAR(255),
-  amount INTEGER,                             -- 金額（最小単位: 円）
-  currency VARCHAR(10) DEFAULT 'jpy',
+  amount_cents INTEGER,                       -- Stripe の最小単位
+  currency VARCHAR(3) DEFAULT 'jpy',
   status VARCHAR(50),                         -- paid, failed, refunded
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -179,7 +267,7 @@ CREATE TABLE schedules (
   site_id UUID REFERENCES sites(id),
   cron_expression VARCHAR(50),                -- "0 9 * * 1,3,5" (月水金9時)
   articles_per_run INTEGER DEFAULT 1,
-  publish_mode VARCHAR(20) DEFAULT 'draft',   -- draft, publish
+  publish_mode VARCHAR(20) DEFAULT 'publish', -- publish, draft
   is_active BOOLEAN DEFAULT true,
   next_run_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -190,10 +278,12 @@ CREATE TABLE schedules (
 CREATE TABLE schedule_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id UUID REFERENCES schedules(id) ON DELETE CASCADE,
-  status VARCHAR(20),                         -- queued, running, completed, failed
+  job_id UUID REFERENCES jobs(id),
+  status VARCHAR(50) DEFAULT 'pending',       -- pending, running, completed, failed
   started_at TIMESTAMP,
   completed_at TIMESTAMP,
   articles_generated INTEGER,
+  generation_details JSONB,
   error_message TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -298,10 +388,11 @@ CREATE TABLE prompt_templates (
 CREATE TABLE article_generation_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+  job_id UUID REFERENCES jobs(id),
   user_id UUID REFERENCES users(id),
   prompt_template_id UUID REFERENCES prompt_templates(id),
   llm_model VARCHAR(100),
-  temperature DECIMAL(3,2),
+  temperature DECIMAL(3,2) CHECK (temperature >= 0 AND temperature <= 2),
   target_keyword VARCHAR(255),
   search_intent VARCHAR(50),
   generation_time_ms INTEGER,
@@ -329,7 +420,7 @@ CREATE TABLE ab_tests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   name VARCHAR(200) NOT NULL,
-  status VARCHAR(20) DEFAULT 'draft',
+  status VARCHAR(50) DEFAULT 'draft',
   variants JSONB NOT NULL,
   metrics TEXT[] NOT NULL,
   duration_days INTEGER DEFAULT 14,
@@ -377,7 +468,7 @@ CREATE TABLE ab_tests (
 - 無料枠：25,000ステップ/月
 
 **リトライ設定:**
-- タイムアウト：10分/記事
+- タイムアウト：20分/記事
 - リトライ回数：最大3回
 - リトライ間隔：指数バックオフ（1分→5分→15分）
 - 最終失敗時：メール通知 + ダッシュボード表示

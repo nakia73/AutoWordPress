@@ -33,36 +33,33 @@
 
 ### カテゴリ1: ドキュメント間の直接矛盾
 
-#### 🔴 CI-001: Fact Check責任の矛盾
+#### 🔴 CI-001: Fact Check方針の不一致
 
 **発生箇所:**
-- `phases/Phase2_CoreAI.md:78` - 「再度LLMで「事実確認（Fact Check）」を行い」
-- `architecture/04_AI_Pipeline.md:160` - 「Fact Checkはユーザー責任（利用規約明記）」
-- `architecture/04_AI_Pipeline.md:232` - 「Fact Checkはユーザー責任（利用規約に明記）」
+- `phases/Phase2_CoreAI.md:78` - 「MVPではFact Check機能は未実装。…MVP後にシステム側で実施」
+- `architecture/04_AI_Pipeline.md:160` - 「MVPではFact Check機能は未実装。…MVP後にシステム側で実施」
+- `architecture/04_AI_Pipeline.md:232` - 「MVPではFact Check機能は未実装。…MVP後にシステム側で実施」
 
-**問題:** システムがFact Checkを行うのか、ユーザー責任なのかが矛盾している。
+**決定事項:** Fact CheckはMVP後にシステム側で実施。MVPでは参照ソース明示と内容確認の導線を提供する。
 
-**根本原因:** 「放置OK」の訴求と「ユーザー責任」の法的免責の間のトレードオフが未解決。
+**根本原因:** Fact Checkの実装時期と責務の記述が曖昧だった。
 
 **推奨対応:**
-1. Phase2_CoreAI.mdの記述を修正し、「参照ソース明示」「補助的チェック」に限定
-2. または、CONCEPT_DECISIONS E8の「ユーザー責任」方針を再検討
+1. Phase2_CoreAI.mdと04_AI_Pipeline.mdを「MVP未実装・MVP後実装」に統一
+2. CONCEPT_DECISIONS E8の方針を上記に合わせて更新
 
 ---
 
 #### 🔴 CI-002: 下書き/公開デフォルト設定の矛盾
 
 **発生箇所:**
-- `phases/Phase2_CoreAI.md:83-84` - 「初期設定として「下書き」状態で投稿し」
+- `phases/Phase2_CoreAI.md:83-84` - 「デフォルトは自動公開で投稿（ユーザー設定で下書きに変更可能）」
 - `CONCEPT_DECISIONS.md G5/J4` - 「自動公開がデフォルト（ユーザー選択可能）」
 
-**問題:** CONCEPT_DECISIONSで「自動公開がデフォルト」と確定しているが、Phase2では「下書きが初期設定」と記載。
+**決定事項:** 自動公開がデフォルト（ユーザー設定で下書きに変更可能）。
 
 **推奨対応:**
-- Phase2_CoreAI.md:83-84を以下に修正:
-  ```
-  - 初期設定として「公開」状態で投稿（ユーザー設定で下書きに変更可能）。
-  ```
+- Phase2_CoreAI.mdの記述をデフォルト自動公開に統一
 
 ---
 
@@ -72,46 +69,42 @@
 - `architecture/05_Sequence_Diagrams.md:17-18` - 方式A「URLクロール」としてFirecrawl/Jina Readerを明記
 - `phases/Phase2_CoreAI.md:26-27` - 「Firecrawl（URL自動クロール）」を「後回し」と明記
 
-**問題:** シーケンス図では3つの入力方式（A: URLクロール、B: インタラクティブ、C: 競合調査）を示すが、方式AはMVPで使えない。
+**決定事項:** AのURLクロールMockup と BのインタラクティブQ&A Mockup を作成し、XなどのSNSで映像を配信して反応を比較し、どちらが市場に求められているかを検証した上で採用方式を決定する。方式Cは本テスト対象外で、扱いは別途決定する。
 
 **推奨対応:**
-1. 05_Sequence_Diagrams.mdに「MVP版」注記を追加
-2. または、MVP対応方式のみ（方式B/C）を明示的に記載
+1. A/Bのモックアップを作成し、Xで反応を検証
+2. 採用方式決定後、05_Sequence_Diagrams.md/04_AI_Pipeline.md/Phase2_CoreAI.mdを更新
 
 ---
 
-#### 🟡 CI-004: 画像生成戦略の不一致
+#### 🟡 CI-004: 画像生成戦略の統一
 
-**発生箇所:**
-- `phases/Phase2_CoreAI.md:21-22, 109` - 「Nanobana Pro画像生成」をMVPに含める
-- `architecture/04_AI_Pipeline.md:164, 236` - 「Unsplash/Pexels（MVP）→ DALL-E 3（Phase 7）」
-- `CONCEPT_DECISIONS.md G8` - 「MVP: Unsplash/Pexels」
+**決定事項:** 画像生成は **Nanobana Proのみ** を使用する。他の画像生成サービスは採用しない。
 
-**問題:** Phase2では「Nanobana Pro」がMVPに含まれるが、他のドキュメントでは「Unsplash/Pexels」がMVP標準。
-
-**推奨対応:**
-- Nanobana ProがMVPに含まれるなら、CONCEPT_DECISIONS G8と04_AI_Pipeline.mdを更新
-- または、Phase2_CoreAI.mdのNanobana Pro記載を削除/修正
+**反映箇所:**
+- `phases/Phase2_CoreAI.md`
+- `architecture/04_AI_Pipeline.md`
+- `CONCEPT_DECISIONS.md`
 
 ---
 
 ### カテゴリ2: コアバリューとの矛盾
 
-#### 🟡 CV-001: 「放置OK」訴求 vs ユーザー責任の緊張
+#### 🟡 CV-001: 「放置OK」訴求と自動化範囲の明文化
 
 **問題の本質:**
 
 | 訴求 | 実態 |
 |------|------|
-| 「放置OK」「全自動」 | Fact Checkはユーザー責任 |
+| 「放置OK」「全自動」 | MVPは参照ソース明示＋確認導線、Fact CheckはMVP後にシステム実施 |
 | 「資産が自動で積み上がる」 | SEO効果は保証しない（B13） |
 | 「誰でも簡単に」 | WP管理画面での編集が必要（SSO未実装） |
 
-**根本原因:** マーケティング訴求と法的免責のバランスが明文化されていない。
+**決定事項（放置OKの定義）:** 初期設定完了後は、スケジュールに従って記事が自動生成・自動公開され、通知で稼働状況を確認できる状態。
 
 **推奨対応:**
-- 「放置OK」の範囲を具体的に定義（何が自動で、何がユーザー責任か）
-- 利用規約・LPでの期待値コントロール文言の明確化
+- 「放置OK」の範囲をドキュメント/LP/UXに反映
+- 通知設計と稼働状況の見える化をMVP必須として整理
 
 ---
 
@@ -140,16 +133,15 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 [プロダクト] [購買思考] [KW調査] [競合分析] [クラスター] [記事生成] [最適化]
 ```
 
-上記パイプラインはフルスペックでは非常に複雑。MVPでの簡略化版が以下のように定義されているが、各ドキュメントで統一されていない。
+上記パイプラインはフルスペックでは非常に複雑。MVPではPhase A〜Gを実装対象とし、実行順序は A→B→C→D→E→F→G に確定しているため、1ヶ月計画とのギャップが大きい。
 
-**MVPで「後回し」とされているもの:**
-- Phase C: キーワード調査API（Keywords Everywhere / DataForSEO）
-- Phase D: 競合分析API
-- Firecrawl（URL自動クロール）
+**決定事項:**
+- MVPでPhase A〜Gを実装対象とする
+- 入力方式A/Bはモックアップ検証で採用方式を決定
 
 **推奨対応:**
-- 04_AI_Pipeline.mdに「MVP版パイプライン」セクションを追加
-- 各フェーズファイルでMVP/Futureの境界を明示
+- スケジュール/工数/テスト期間を再見積もり
+- 期限固定の場合は、段階的リリース順序を定義（実行順序は確定済み）
 
 ---
 
@@ -176,7 +168,7 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 |-----|-------------|------|
 | Tavily Search | ??? | 未調査 |
 | Gemini 3.0 Pro | ??? | 使用量依存 |
-| Nanobana Pro / Unsplash | ??? | 未定 |
+| Nanobana Pro | ??? | 未定 |
 
 **影響:** $20/月の価格設定が利益を生むか不明。
 
@@ -277,8 +269,8 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 - 実質的に8フェーズを4週間で完了する必要がある
 
 **推奨対応:**
-- スケジュールの現実性を再評価
-- または、Phase 0/0.5を事前に完了させておく
+**決定事項:**
+- 現行スケジュールで進行する（延長は行わない）
 
 ---
 
@@ -304,8 +296,8 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 
 | ID | 問題 | 修正対象ファイル |
 |----|------|-----------------|
-| CI-001 | Fact Check責任矛盾 | Phase2_CoreAI.md または CONCEPT_DECISIONS.md |
-| CI-002 | 下書き/公開デフォルト矛盾 | Phase2_CoreAI.md |
+| CI-001 | Fact Check方針の統一（MVP後実装） | Phase2_CoreAI.md / 04_AI_Pipeline.md / CONCEPT_DECISIONS.md |
+| CI-002 | 自動公開デフォルトの統一 | Phase2_CoreAI.md |
 | CI-003 | URLクロールMVP矛盾 | 05_Sequence_Diagrams.md |
 
 ### MVP前に解決推奨
@@ -313,7 +305,7 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 | ID | 問題 | 対応内容 |
 |----|------|---------|
 | CI-004 | 画像生成戦略不一致 | 方針を統一 |
-| CV-001 | 放置OK vs ユーザー責任 | 範囲の明確化 |
+| CV-001 | 放置OK定義の明文化 | 範囲の明確化 |
 | TA-001 | パイプライン複雑性 | MVPスコープ明示 |
 | TA-002 | WP管理画面アクセス | ログイン方法の設計 |
 | UX-001 | 3入力方式複雑性 | MVP UI設計 |
@@ -325,15 +317,15 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 | TA-003 | 単位経済性未定義 | 運用開始後に検証可能 |
 | UX-002 | フリーミアム未決定 | Phase 5で決定予定 |
 | ED-001 | ベンダー依存 | 意図的な設計 |
-| MS-001 | スケジュール圧縮 | 状況に応じて調整 |
+| MS-001 | スケジュール圧縮 | 現行スケジュールで進行（決定済み） |
 | DI-001 | MVP境界不明確 | ドキュメント整備 |
 
 ---
 
 ## 次のアクション
 
-1. **即時対応:** CI-001, CI-002, CI-003の矛盾を解消
-2. **設計確認:** CV-001（放置OKの定義）を明確化
+1. **即時対応:** CI-001/CI-002の方針を反映し、CI-003のMVP注記を追加
+2. **設計確認:** CV-001（放置OKの定義）をLP/UX/通知設計に反映
 3. **ドキュメント更新:** 各ファイルにMVPスコープ注記を追加
 4. **本レポートの活用:** 新たな矛盾発見時は本レポートに追記
 

@@ -49,7 +49,7 @@
 
 ## 高リスク項目（実装前に解決必須）
 
-### IR-001: `products.analysis_result` (JSONB) のスキーマ未定義
+### IR-001: `products.analysis_result` (JSONB) のスキーマ確定
 
 **問題箇所:** `02_Backend_Database.md:110`
 
@@ -62,7 +62,7 @@ analysis_result JSONB,  -- ペルソナ、キーワード等
 - フロントエンド開発者が型推測で実装 → Runtime エラー
 - 単体テスト作成不可能（期待値が定義できない）
 
-**対応方針:**
+**決定事項:**
 ```typescript
 type ProductAnalysisResult = {
   phaseA: {
@@ -107,11 +107,11 @@ type ProductAnalysisResult = {
 };
 ```
 
-**対応期限:** Phase 2 開始前
+**対応状況:** 決定済み
 
 ---
 
-### IR-002: `jobs.payload` (JSONB) の型定義なし
+### IR-002: `jobs.payload` (JSONB) の型定義確定
 
 **問題箇所:** `02_Backend_Database.md:141-154`
 
@@ -124,7 +124,7 @@ job_type VARCHAR(50),  -- ANALYZE_PRODUCT, GENERATE_ARTICLE, SYNC_WP
 - 各 `job_type` に対応する `payload` 構造が未定義
 - API と Inngest Worker 間でキー名不一致が発生するリスク
 
-**対応方針:**
+**決定事項:**
 ```typescript
 // types/jobs.ts
 export type JobPayload =
@@ -162,7 +162,7 @@ export type ProvisionBlogPayload = {
 };
 ```
 
-**対応期限:** Phase 1 開始前
+**対応状況:** 決定済み
 
 ---
 
@@ -207,12 +207,13 @@ export type TavilyToLLMInput = {
 
 ---
 
-### IR-004: API Route ↔ Inngest の同期/非同期判定基準なし
+### IR-004: API Route ↔ Inngest の同期/非同期判定基準確定
 
 **問題箇所:** `02_Backend_Database.md:9-12`, `04_AI_Pipeline.md:195`
 
-**現状:**
-- 「非同期ジョブキューを挟む」とあるが、どの処理を同期で行い、どこから非同期に委譲するか不明確
+**決定事項:**
+- 非同期は「投げっぱなし」ではなく、ジョブ進行/失敗を追跡しダッシュボードと通知で可視化する
+- APIは即時ACKを返し、job_id / status を返却できる設計とする
 
 **対応方針:**
 
@@ -220,11 +221,11 @@ export type TavilyToLLMInput = {
 |---------------|---------|---------------------|
 | `POST /api/products` | DB保存、バリデーション | プロダクト分析（Phase A-E） |
 | `POST /api/sites` | DB保存、ステータス初期化 | WordPress構築、DNS設定 |
-| `POST /api/articles/generate` | DB保存（draft状態） | 記事生成、WordPress同期 |
+| `POST /api/articles/generate` | DB保存（draft作成。デフォルトは自動公開） | 記事生成、WordPress同期 |
 | `POST /api/schedules` | DB保存、Inngest登録 | - |
 | `PUT /api/articles/:id/publish` | ステータス更新 | WordPress同期 |
 
-**対応期限:** Phase 1 開始前
+**対応状況:** 決定済み
 
 ---
 
@@ -250,7 +251,7 @@ Provisioner = Inngest Function（サーバーレス関数）
 
 SSH認証情報管理:
 - 環境変数: VPS_SSH_PRIVATE_KEY（Base64エンコード）
-- Vercel Secrets で管理
+- 環境変数で管理
 - 実行時にメモリ上で復号化、ディスク書き込み禁止
 ```
 
@@ -258,7 +259,7 @@ SSH認証情報管理:
 
 ---
 
-### IR-006: エラー発生時のUI/通知フロー未定義
+### IR-006: エラー発生時のUI/通知フロー確定
 
 **問題箇所:** `02_Backend_Database.md:378-384`, `04_AI_Pipeline.md:258-264`
 
@@ -268,11 +269,13 @@ SSH認証情報管理:
 ドキュメントB: 「別モデル選択UIを表示（Phase 12で実装）」
 ```
 
-**問題:**
-- MVP〜Phase 11 の間、エラー時のUIが存在しない
-- Inngest内エラー → API → フロントエンドへの伝播経路が未定義
+**決定事項:**
+- 非同期処理の失敗は必ずダッシュボード/通知で可視化する
+- ユーザーが理由を理解できないエラー落ちを許容しない（明確な原因と次アクションを提示）
+- 本番ではエラーを極小化する設計を優先し、発生時のみ最小限の説明を出す
 
-**対応方針:**
+**方針（確定）:**
+**表示レベル:** カテゴリ + 具体原因（HTTP/失敗理由） + 次アクション
 
 | エラー種別 | HTTP Status | ユーザーへの表示 | 対応アクション | リトライ |
 |-----------|-------------|-----------------|---------------|---------|
@@ -287,19 +290,19 @@ SSH認証情報管理:
 - 失敗したジョブの詳細表示
 - 手動再実行ボタン
 
-**対応期限:** Phase 3 完了前
+**対応状況:** 決定済み
 
 ---
 
-### IR-007: WordPress API エラー時の処理未定義
+### IR-007: WordPress API エラー時の処理確定
 
 **問題箇所:** `05_Sequence_Diagrams.md:150`
 
-**未定義のケース:**
-- `wp_api_token` 無効化時の検知・通知メカニズム
-- HTTP 403/500 時のリトライ vs ユーザー通知の判断基準
+**決定事項:**
+- 401/403/500/502 それぞれのユーザー通知とリトライ方針を固定
+- 失敗理由はユーザーに理解可能な文言で提示
 
-**対応方針:**
+**方針（確定）:**
 
 ```typescript
 // WordPress API エラーハンドリング
@@ -337,18 +340,16 @@ const wpErrorHandler = {
 
 ## 中リスク項目（Phase 6 前に解決推奨）
 
-### IR-008: `articles.content` の形式未確定
+### IR-008: `articles.content` の形式確定
 
 **問題箇所:** `02_Backend_Database.md:131`
 
 ```sql
-content TEXT,  -- HTML/Markdown
+content TEXT,  -- HTML
 ```
 
-**対応方針:**
-- DB保存形式: **HTML**（WordPress REST API との整合性）
-- 生成時: Markdown → HTML 変換（marked.js 使用）
-- 編集UI: Markdown エディタ（変換は保存時）
+**決定事項:**
+- DB保存形式は **HTMLのみ**（WordPress REST API と編集体験の整合性を優先）
 
 ---
 
@@ -373,11 +374,11 @@ article_generation_logs テーブル:
 
 ---
 
-### IR-010: `schedule_jobs` → `jobs` の外部キーなし
+### IR-010: `schedule_jobs` → `jobs` の外部キー確定
 
 **問題箇所:** `02_Backend_Database.md:189-199`
 
-**対応方針:**
+**決定事項:**
 ```sql
 ALTER TABLE schedule_jobs
 ADD COLUMN job_id UUID REFERENCES jobs(id);
@@ -389,7 +390,7 @@ ADD COLUMN job_id UUID REFERENCES jobs(id);
 
 **問題箇所:** `02_Backend_Database.md:134`
 
-**対応方針:**
+**決定事項:**
 ```sql
 -- 状態遷移の拡張
 status VARCHAR(50) DEFAULT 'draft'
@@ -404,7 +405,7 @@ status VARCHAR(50) DEFAULT 'draft'
 
 **問題箇所:** `02_Backend_Database.md:91-100`
 
-**対応方針:**
+**決定事項:**
 ```sql
 -- 状態遷移の拡張
 status VARCHAR(50) DEFAULT 'pending'
@@ -417,7 +418,7 @@ status VARCHAR(50) DEFAULT 'pending'
 
 ### IR-013: `schedule_jobs` の部分的失敗の記録方法未定義
 
-**対応方針:**
+**決定事項:**
 ```sql
 ALTER TABLE schedule_jobs
 ADD COLUMN generation_details JSONB;
@@ -471,7 +472,7 @@ Phase 15:  prompt_templates テーブル完全移行（UI編集可能）
 
 **問題箇所:** `02_Backend_Database.md:127-139`
 
-**対応方針:**
+**決定事項:**
 ```sql
 ALTER TABLE articles ADD COLUMN target_keyword VARCHAR(255);
 ALTER TABLE articles ADD COLUMN search_intent VARCHAR(50);
@@ -509,29 +510,30 @@ ALTER TABLE articles ADD COLUMN cluster_id UUID REFERENCES article_clusters(id);
   - [ ] `types/articles.ts`
   - [ ] `types/external-apis.ts`
 - [ ] OpenAPI 仕様書作成（全エンドポイント）
-- [ ] Error Handling Spec 確定
+- [x] Error Handling Spec 確定
 - [ ] 状態遷移図作成（Site, Article, Job）
 
 ### Phase 1 完了前
 
-- [ ] IR-002 対応完了（jobs payload スキーマ）
-- [ ] IR-004 対応完了（同期/非同期判定基準）
-- [ ] IR-005 対応完了（Provisioner 定義）
+- [x] IR-002 対応完了（jobs payload スキーマ）
+- [x] IR-004 対応完了（同期/非同期判定基準）
+- [x] IR-005 対応完了（Provisioner 定義）
 
 ### Phase 2 完了前
 
-- [ ] IR-001 対応完了（analysis_result スキーマ）
-- [ ] IR-003 対応完了（外部API マッピング）
-- [ ] IR-007 対応完了（WordPress エラーハンドリング）
+- [x] IR-001 対応完了（analysis_result スキーマ）
+- [x] IR-003 対応完了（外部API マッピング）
+- [x] IR-007 対応完了（WordPress エラーハンドリング）
 
 ### Phase 3 完了前
 
-- [ ] IR-006 対応完了（エラーUI）
-- [ ] IR-011 対応完了（article 状態遷移）
+- [x] IR-006 対応完了（エラーUI）
+- [x] IR-011 対応完了（article 状態遷移）
 
 ### Phase 6 前
 
-- [ ] IR-008〜IR-017 対応完了
+- [x] IR-008 対応完了（articles.content 形式はHTML）
+- [ ] IR-009〜IR-017 対応完了
 
 ---
 
@@ -571,16 +573,16 @@ ALTER TABLE articles ADD COLUMN cluster_id UUID REFERENCES article_clusters(id);
 | ドキュメント | 値 | 対象 |
 |------------|-----|------|
 | `04_AI_Pipeline.md:254` | 30秒 | LLM_TIMEOUT_SECONDS |
-| `02_Backend_Database.md:380` | 10分/記事 | 記事生成タイムアウト |
+| `02_Backend_Database.md:380` | 20分/記事 | 記事生成タイムアウト |
 
 **問題:**
-- LLMタイムアウト30秒 vs 記事生成全体10分の関係が不明
+- LLMタイムアウト30秒 vs 記事生成全体20分の関係が不明
 - 1記事生成で何回LLM呼び出しが発生するか未定義
 
 **対応方針:**
 ```
 LLM単一呼び出し: 30秒
-記事生成全体（複数LLM呼び出し含む）: 10分
+記事生成全体（複数LLM呼び出し含む）: 20分
 → 1記事あたり最大20回のLLM呼び出しを想定
 ```
 
@@ -661,12 +663,10 @@ draft, generating, review, published, archived, failed
 
 | ドキュメント | 定義値 |
 |------------|-------|
-| `02_Backend_Database.md:193` | queued, running, completed, failed |
+| `02_Backend_Database.md:193` | pending, running, completed, failed |
 | 本レポート IR-013 | pending, running, completed, failed |
 
-**問題:** `queued` vs `pending` の不統一
-
-**対応方針:** `pending` に統一（Inngest との整合性）
+**決定事項:** `pending` に統一（Inngest との整合性）
 
 ---
 
@@ -692,18 +692,16 @@ pending, provisioning, provision_failed, active, suspended, deleted
 |---------|-----|
 | users.subscription_status | VARCHAR(50) |
 | sites.status | VARCHAR(50) |
-| schedule_jobs.status | **VARCHAR(20)** |
-| ab_tests.status | **VARCHAR(20)** |
+| schedule_jobs.status | VARCHAR(50) |
+| ab_tests.status | VARCHAR(50) |
 
-**問題:** VARCHAR(20) では `provision_failed`（16文字）が入らない可能性
-
-**対応方針:** 全て VARCHAR(50) に統一
+**決定事項:** 全て VARCHAR(50) に統一
 
 ---
 
 ## 4. 外部キー参照の欠落
 
-### IR-027: `products.site_id` の ON DELETE 未指定
+### IR-027: `products.site_id` の ON DELETE 指定確定
 
 **現在（02_Backend_Database.md:106）:**
 ```sql
@@ -712,18 +710,18 @@ site_id UUID REFERENCES sites(id),  -- ON DELETE 指定なし
 
 **問題:** サイト削除時の動作が不定
 
-**対応方針:**
+**決定事項:**
 ```sql
-site_id UUID REFERENCES sites(id) ON DELETE SET NULL
+site_id UUID REFERENCES sites(id) ON DELETE CASCADE
 ```
 
 ---
 
-### IR-028: `article_generation_logs` → `jobs` の外部キー欠落
+### IR-028: `article_generation_logs` → `jobs` の外部キー確定
 
 **問題:** ジョブの実行ログがどの非同期ジョブに対応するか不明
 
-**対応方針:**
+**決定事項:**
 ```sql
 ALTER TABLE article_generation_logs
 ADD COLUMN job_id UUID REFERENCES jobs(id);
@@ -740,15 +738,14 @@ ADD COLUMN job_id UUID REFERENCES jobs(id);
 wp_api_token VARCHAR(500),  -- AES-256-GCMで暗号化して保存
 ```
 
-**欠落項目:**
-- 暗号化キー管理方法（KMS vs 環境変数）
-- キーローテーション方針
-- トークン有効期限管理
-- トークン無効化方法
+**決定事項:**
+- 暗号化キーは環境変数で管理
+- キーローテーション方針を設定
+- トークン有効期限管理を明記
+- トークン無効化方法を明記
 
-**対応方針:**
 ```
-暗号化キー: AWS KMS または Vercel Environment Variables
+暗号化キー: 環境変数で管理（Vercel Environment Variables）
 キーローテーション: 90日ごと
 有効期限: WordPress Application Password は無期限
 無効化: ダッシュボードから手動、またはサイト削除時自動
@@ -764,10 +761,10 @@ wp_api_token VARCHAR(500),  -- AES-256-GCMで暗号化して保存
 - レート制限時の処理
 - API キー漏洩時の対応
 
-**対応方針:**
+**決定事項:**
 ```
-保存: Vercel Environment Variables（TAVILY_API_KEY）
-暗号化: Vercel側で自動暗号化
+保存: 環境変数（TAVILY_API_KEY）
+暗号化: プラットフォーム側で自動暗号化
 レート制限: 429エラー時は指数バックオフでリトライ
 漏洩時: 即座にキー再発行、環境変数更新
 ```
@@ -1109,31 +1106,31 @@ Phase 15 開始条件:
 
 ### DB スキーマ確定前
 
-- [ ] IR-023: articles.status に generating, review, failed 追加
-- [ ] IR-024: schedule_jobs.status を pending に統一
-- [ ] IR-025: sites.status に pending, provision_failed, deleted 追加
-- [ ] IR-026: 全 status カラムを VARCHAR(50) に統一
-- [ ] IR-027: products.site_id に ON DELETE SET NULL 追加
-- [ ] IR-032: billing_history.amount を amount_cents に変更
-- [ ] IR-033: temperature に CHECK 制約追加
-- [ ] IR-034: products.site_id に NOT NULL 追加
+- [x] IR-023: articles.status に generating, review, failed 追加
+- [x] IR-024: schedule_jobs.status を pending に統一
+- [x] IR-025: sites.status に pending, provision_failed, deleted 追加
+- [x] IR-026: 全 status カラムを VARCHAR(50) に統一
+- [x] IR-027: products.site_id に ON DELETE CASCADE 追加
+- [x] IR-032: billing_history.amount を amount_cents に変更
+- [x] IR-033: temperature に CHECK 制約追加
+- [x] IR-034: products.site_id に NOT NULL 追加
 - [ ] IR-043: user_activity_logs テーブル作成
 - [ ] IR-044: deletion_logs テーブル作成
 - [ ] IR-045: stripe_webhook_logs テーブル作成
 
 ### 環境変数・設定確定前
 
-- [ ] IR-018: リトライ間隔を 1分→5分→15分 に統一
-- [ ] IR-019: タイムアウト値の関係を明確化
-- [ ] IR-029: 暗号化キー管理方法を決定
-- [ ] IR-030: Tavily APIキー管理方法を決定
-- [ ] IR-031: SSOトークン有効期限を5分に設定
+- [x] IR-018: リトライ間隔を 1分→5分→15分 に統一
+- [x] IR-019: タイムアウト値の関係を明確化（20分/記事）
+- [x] IR-029: 暗号化キー管理方法を決定（環境変数で管理）
+- [x] IR-030: Tavily APIキー管理方法を決定（環境変数で管理）
+- [x] IR-031: SSOトークン有効期限を5分に設定
 
 ### API 実装前
 
-- [ ] IR-036: Zodスキーマによるバリデーション実装
-- [ ] IR-037: cron-parser によるCron式検証実装
-- [ ] IR-041: レート制限ミドルウェア実装
+- [x] IR-036: Zodスキーマによるバリデーション実装
+- [x] IR-037: cron-parser によるCron式検証実装
+- [x] IR-041: レート制限ミドルウェア実装
 
 ---
 
@@ -1477,7 +1474,7 @@ Phase 0 → 0.5 → 1 → 2 → 3 → 4 → 5 → 6
 | **将来** | クオリティ重視 | 複数段階のレビュー・推敲 |
 
 **対策:**
-- Phase 2_CoreAI.md: 生成後に「事実確認（Fact Check）」を実施
+- Phase 2_CoreAI.md: MVPではFact Check未実装。MVP後にシステム側で実施
 - **【決定済み】** デフォルトは自動公開（ユーザー選択可能）（CONCEPT_DECISIONS.md G5, J4参照）
 
 ---
@@ -1546,7 +1543,7 @@ Phase 0 → 0.5 → 1 → 2 → 3 → 4 → 5 → 6
 
 **問題箇所:** CONCEPT_DECISIONS.md E8 Lines 876-885
 
-**内容:** MVP ではユーザー責任 + AI生成免責表示が必須
+**内容:** MVPではFact Check未実装のため、参照ソース明示と内容確認導線、AI生成免責表示が必要
 
 **推奨アクション:**
 - [ ] Phase 1 並行で利用規約ドラフト作成
@@ -1886,9 +1883,9 @@ API呼び出し:
 ```
 
 **推奨対応:**
-- MVP段階では外部API依存を最小化
-- Tavily、Firecrawlは「成長フェーズ」で追加
-- コスト試算を詳細化し、予算を見直し
+- MVPでPhase A〜Gを実装する前提で、APIコスト上限/レート制限を設計
+- Tavily/Firecrawlを含むコスト試算を詳細化し、予算を見直し
+- A/B検証の結果に応じてURLクロール（Firecrawl）の採用有無を確定
 
 ---
 
@@ -1911,19 +1908,9 @@ API呼び出し:
 - Phase 2（AIコア機能）の複雑性が過大
 - テスト期間が確保されていない
 
-**推奨対応:**
-
-```
-MVP v1 (1ヶ月): 最小限
-- インフラ + 認証 (Phase 1)
-- 基本的な記事生成 (Phase 2 簡易版)
-- ダッシュボード (Phase 3)
-- Stripe決済 (Phase 5)
-
-MVP v1.1 (3ヶ月目): 拡張
-- スケジュール自動化 (Phase 4)
-- キーワード調査API (Phase 2拡張)
-```
+**決定事項:**
+- 現行スケジュールで進行する（期間延長は行わない）
+- 期限固定の前提で、優先順位と実行順序（A→B→C→D→E→F→G）を厳守
 
 ---
 
@@ -1942,8 +1929,8 @@ MVP v1.1 (3ヶ月目): 拡張
 - 「放置OK」ではなく「サービス監視必須」に
 
 **推奨対応:**
-- MVP必須APIを最小化（Supabase, Gemini, DigitalOcean, Cloudflare, Inngestのみ）
-- Tavily, Firecrawlは成長フェーズで追加
+- MVPで外部API依存を前提とするため、障害時の影響範囲と停止条件を明文化
+- 監視・通知・フェイルセーフ（自動停止/手動切替）を設計
 
 ---
 
@@ -2102,20 +2089,20 @@ URL入力 → プログレス表示 → 記事生成開始
 - 管理ダッシュボードで確認・公開
 - ターゲットを「コンテンツマネージャー」に変更
 
-### 改善3: 外部依存の最小化
+### 改善3: 外部依存の管理
 
-**MVP必須:**
+**MVP必須（Phase A〜G実装前提）:**
 - Supabase (Auth + DB)
 - Gemini 3.0 Pro (記事生成)
 - DigitalOcean VPS (WordPress)
 - Cloudflare (DNS/CDN)
 - Inngest (スケジューリング)
+- Tavily API（調査/検索）
+- Keywords Everywhere / DataForSEO（キーワード調査）
+- Firecrawl / Jina Reader（URLクロール）※A/B採用判断後
 
-**後で追加（成長フェーズ）:**
-- Keywords Everywhere / DataForSEO
-- Tavily API
-- Firecrawl
-- DALL-E 3
+**後で追加:**
+- （該当なし）
 
 ---
 
@@ -2123,15 +2110,15 @@ URL入力 → プログレス表示 → 記事生成開始
 
 ### コアコンセプト確認
 
-- [ ] CV-001: 7フェーズパイプラインをMVP簡易版に縮小
+- [x] CV-001: MVPで7フェーズを実装する前提のスコープ/順序を確定（A→B→C→D→E→F→G）
 - [ ] CV-002: 「放置OK」のデフォルト動作を確定（自動公開 or 手動確認）
 - [ ] CV-003: APIコスト詳細試算と予算見直し
-- [ ] CV-004: タイムラインの段階化（MVP v1 / v1.1）
+- [x] CV-004: 現行タイムラインで進行（再設計なし）
 
 ### 設計整合性確認
 
-- [ ] CV-005: MVP必須APIを最小化
-- [ ] CV-006: SEO効果に関するメッセージングを統一
+- [ ] CV-005: MVP必須APIの依存管理/監視設計
+- [x] CV-006: SEO効果に関するメッセージングを統一（保証しないが対策は実施）
 - [ ] CV-007: 有事の移管手順書を作成
 - [ ] CV-008: Phase 7以降を「候補リスト」として再位置づけ
 - [ ] CV-009: オンボーディング入力項目を明示的に定義
@@ -2284,19 +2271,18 @@ Phase G: 投稿・監視
 | フェーズ | 必要性 | MVP必須か | 代替案 |
 |---------|--------|----------|--------|
 | Phase A | ✅ 高 | ✅ 必須 | - |
-| Phase B | ⚠️ 中 | ❌ 後回し可 | 固定テンプレート |
-| Phase C | ⚠️ 中 | ❌ 後回し可 | 手動キーワード入力 |
-| Phase D | ⚠️ 中 | ❌ 後回し可 | スキップ |
-| Phase E | ⚠️ 中 | ❌ 後回し可 | 単発記事生成 |
+| Phase B | ⚠️ 中 | ✅ 必須 | - |
+| Phase C | ⚠️ 中 | ✅ 必須 | - |
+| Phase D | ⚠️ 中 | ✅ 必須 | - |
+| Phase E | ⚠️ 中 | ✅ 必須 | - |
 | Phase F | ✅ 高 | ✅ 必須 | - |
 | Phase G | ✅ 高 | ✅ 必須 | - |
 
 **本質的結論:**
 ```
-MVPに必要なのは Phase A + F + G のみ。
-
-Phase B-E は「SEO効果を保証しない」（B9）と矛盾するため
-MVP段階では外部API依存を避け、簡易版で実装すべき。
+MVPでは Phase A〜G を実装対象とする。
+そのため外部API依存・工数・コストのリスクが増大する。
+実行順序は確定（A→B→C→D→E→F→G）。上限（コスト/レート）を明確化する必要がある。
 ```
 
 ---
@@ -2565,10 +2551,10 @@ P(成功) = (1 - 0.6×0.3) × (1 - 0.4×0.8) × (1 - 0.3×0.3) × ...
 
 ## 実装前チェックリスト（ファーストプリンシプル）
 
-### 価値検証
-- [ ] FP-001: AI記事品質のテスト生成（10記事）実施
+### 価値検証（軽量スモーク）
+- [ ] FP-001: AI記事品質のテスト生成（5記事）実施
 - [ ] FP-001: テスト記事の品質評価（5段階）
-- [ ] FP-002: ターゲットユーザー5人へのインタビュー
+- [ ] FP-002: ターゲットユーザー3人への短時間インタビュー
 
 ### 財務検証
 - [ ] FP-006: Gemini API コスト試算（1記事あたり）
@@ -2617,4 +2603,3 @@ P(成功) = (1 - 0.6×0.3) × (1 - 0.4×0.8) × (1 - 0.3×0.3) × ...
 - [04_AI_Pipeline.md](./04_AI_Pipeline.md) - AI処理パイプライン仕様
 - [Phase2_CoreAI.md](../phases/Phase2_CoreAI.md) - コアAI機能仕様
 - [Phase3_UserInterface.md](../phases/Phase3_UserInterface.md) - UI仕様
-

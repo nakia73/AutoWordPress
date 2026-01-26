@@ -26,6 +26,8 @@ Phase G          Phase F           Phase E
 
 ---
 
+**MVPスコープ:** Phase A〜Gを実装対象とする。実行順序は A→B→C→D→E→F→G に確定。
+
 ### Phase A: プロダクト理解（Product Understanding）
 
 **目的:** 自社プロダクトの本質的な価値・ターゲット・競合を理解する
@@ -43,6 +45,8 @@ Phase G          Phase F           Phase E
 - ターゲットユーザー像
 - 主要な競合リスト
 - 差別化ポイント
+
+**MVP採用方式の決定プロセス:** AのURLクロールMockup と BのインタラクティブQ&A Mockup を作成し、XなどのSNSで映像を配信して反応を比較し、どちらが市場に求められているかを検証した上で採用方式を決定する。方式Cは本テスト対象外で、扱いは別途決定する。
 
 ---
 
@@ -151,17 +155,17 @@ Phase G          Phase F           Phase E
 2. **Writer（執筆）**
    - Input: 構成案 + 参照情報
    - Tool: Gemini 3.0 Pro（ソフトコーディング）
-   - Output: 本文（Markdown/HTML）、メタディスクリプション
+   - Output: 本文（HTML）、メタディスクリプション
    - **プロンプトテンプレートID記録**（Phase 15トレーサビリティ）
 
 3. **Editor（推敲）**
    - Input: 初稿
    - Output: HTMLタグ整合性、導線自然さ、SEOチェック
-   - **注意:** Fact Checkはユーザー責任（利用規約明記）
+   - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
 
 4. **Illustrator（画像）**
    - Input: 記事タイトル・要約
-   - Tool: Unsplash/Pexels（MVP）→ DALL-E 3（Phase 7）
+   - Tool: Nanobana Pro
    - Output: アイキャッチ画像URL
 
 ---
@@ -199,6 +203,7 @@ Phase G          Phase F           Phase E
       - **A. URLクロール方式:** プロダクトURLを入力 → Firecrawl/Jina Readerで情報取得
       - **B. インタラクティブ方式:** ユーザーへの質問形式で情報収集（明確なプロダクトがない場合）
       - **C. 競合調査方式:** Tavily Search APIで市場調査 → LLMで解釈・整理
+    - **注記:** MVPで採用する方式はA/Bモックアップ検証後に決定する（Xでインプレッション/反応を比較）。
     - **Tool:**
       - 方式A: **Firecrawl**（プライマリ）/ **Jina Reader**（フォールバック）+ LLM
       - 方式B: LLMによる対話的質問生成 + ユーザー入力
@@ -223,17 +228,17 @@ Phase G          Phase F           Phase E
 4.  **Writer (執筆):**
     - **Input:** 構成案 + 参照情報
     - **Tool:** **Gemini 3.0 Pro**（ソフトコーディング、ユーザー変更可）
-    - **Output:** 本文（Markdown/HTML）、メタディスクリプション
+    - **Output:** 本文（HTML）、メタディスクリプション
 
 5.  **Editor (推敲・校正):**
     - **Input:** 初稿
     - **Tool:** LLM（設定に従う）
     - **Output:** HTMLタグの整合性チェック、プロダクト導線の自然さチェック
-    - **注意:** Fact Checkはユーザー責任（利用規約に明記）
+    - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
 
 6.  **Illustrator (画像):**
     - **Input:** 記事タイトル・要約
-    - **Tool:** **Unsplash/Pexels API**（MVP）→ DALL-E 3（Phase 7）
+    - **Tool:** **Nanobana Pro**
     - **Output:** アイキャッチ画像 (URL)
 
 ## LLMモデル戦略（確定）
@@ -276,7 +281,7 @@ LLM_MAX_RETRIES=3
   - 1日10記事：バッチ処理として実装
 
 **リトライ設定:**
-- タイムアウト：10分/記事
+- タイムアウト：20分/記事
 - リトライ回数：最大3回
 - リトライ間隔：指数バックオフ（1分→5分→15分）
 - 最終失敗時：メール通知 + ダッシュボード表示

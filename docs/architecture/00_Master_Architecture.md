@@ -91,7 +91,7 @@
 - **Search/競合調査:** **Tavily API** → LLM解釈
 - **Keyword Research:** Keywords Everywhere / DataForSEO（Phase C）
 - **Scraping:** **Firecrawl + Jina Reader**（フォールバック）
-- **Image (MVP):** Unsplash/Pexels → **DALL-E 3**（Phase 7）
+- **Image:** **Nanobana Pro**
 - **Scheduler:** **Inngest**（スケジュール自動化）
 - **Prompt Intelligence:** Phase 15で効果分析・A/Bテスト
 

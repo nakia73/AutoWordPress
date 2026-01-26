@@ -20,6 +20,8 @@
 
 **重要:** 方式Cでは、Tavily Search API → LLM解釈 のフローが**必須**です。
 
+**MVP採用方式の決定プロセス:** AのURLクロールMockup と BのインタラクティブQ&A Mockup を作成し、XなどのSNSで映像を配信して反応を比較し、どちらが市場に求められているかを検証した上で採用方式を決定する。方式Cは本テスト対象外で、扱いは別途決定する。
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -108,7 +110,7 @@ sequenceDiagram
     participant DB as Supabase (PostgreSQL)
     participant Tavily as Tavily Search API
     participant LLM as Gemini 3.0 Pro (LiteLLM)<br/>※ソフトコーディング
-    participant ImageGen as Unsplash/Pexels (MVP)
+    participant ImageGen as Nanobana Pro
     participant UserWP as WordPress Multisite
 
     Scheduler->>NextAPI: Trigger: Generate Articles (Auth Header)

@@ -33,15 +33,13 @@
                                                                └──────────────┘
 ```
 
-### 2.2 画像生成API候補
+### 2.2 画像生成API
 
 | API | 特徴 | コスト | 品質 |
 |-----|------|--------|------|
-| DALL-E 3 | 高品質、テキスト描画可能 | $0.04-0.12/枚 | ◎ |
-| Stable Diffusion XL | オープンソース | インフラコストのみ | ○ |
-| Midjourney API | アーティスティック | $0.01-0.05/枚 | ◎ |
+| Nanobana Pro | 記事内容に最適化した画像生成 | 要見積 | ◎ |
 
-**初期採用:** DALL-E 3（品質と安定性を優先）
+**採用:** Nanobana Pro（唯一の画像生成手段）
 
 ### 2.3 ユーザー設定
 
@@ -63,7 +61,7 @@
 async function generateImagePrompt(article: Article): Promise<string> {
   const prompt = await llm.generate({
     system: `You are an expert at creating image prompts for blog articles.
-             Create a prompt for DALL-E 3 that captures the essence of the article.
+             Create a prompt for Nanobana Pro that captures the essence of the article.
              Style: ${article.settings.imageStyle}
              Color theme: ${article.settings.colorTheme}`,
     user: `Article title: ${article.title}

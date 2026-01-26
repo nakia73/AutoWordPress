@@ -59,7 +59,7 @@ docs/
 
 | Phase | 名称 | テーマ | 概要 |
 |-------|------|--------|------|
-| [Phase 7](./phases/Phase7_Visual.md) | Visual | Visual Appeal | AI画像生成（DALL-E 3）|
+| [Phase 7](./phases/Phase7_Visual.md) | Visual | Visual Appeal | AI画像生成（Nanobana Pro）|
 | [Phase 8](./phases/Phase8_CustomDomain.md) | Custom Domain | Brand Identity | 独自ドメイン接続・SSL自動発行 |
 | [Phase 9](./phases/Phase9_SSO.md) | SSO | Seamless Experience | ダッシュボード→WP管理画面のシームレスログイン |
 | [Phase 10](./phases/Phase10_GSCIntegration.md) | GSC Integration | Optimization | Google Search Console連携・AI自律改善 |
@@ -100,7 +100,7 @@ docs/
 | Worker | **Inngest** | 長時間処理・自動リトライ |
 | AI | **Gemini 3.0 Pro** | LiteLLMプロキシ経由、ソフトコーディング |
 | Search | Tavily API, **Firecrawl + Jina Reader** | |
-| Image | Unsplash/Pexels (MVP) → DALL-E 3 (Phase 7) | |
+| Image | Nanobana Pro | |
 | Storage | **Cloudflare R2** | エグレス無料 |
 | Payment | Stripe | |
 | Hosting | Vercel (App), **DigitalOcean VPS** (WordPress) | |
