@@ -1,0 +1,53 @@
+flowchart TB
+    subgraph User["👤 ユーザー"]
+        Browser[ブラウザ]
+    end
+
+    subgraph Vercel["☁️ Vercel"]
+        NextUI[Next.js Dashboard]
+        NextAPI[API Routes]
+    end
+
+    subgraph Supabase["🗄️ Supabase"]
+        Auth[Auth]
+        DB[(PostgreSQL)]
+    end
+
+    subgraph Worker["⚙️ Inngest Worker"]
+        Analyzer[プロダクト分析]
+        Writer[記事生成]
+        Provisioner[WPプロビジョニング]
+    end
+
+    subgraph AI["🤖 AI APIs"]
+        Claude[Claude 3.5 Sonnet]
+        Firecrawl[Firecrawl]
+        Tavily[Tavily Search]
+    end
+
+    subgraph Infrastructure["🖥️ DigitalOcean VPS"]
+        WP[WordPress Multisite]
+        MariaDB[(MariaDB)]
+    end
+
+    subgraph CDN["🌐 Cloudflare"]
+        DNS[DNS]
+        R2[R2 Storage]
+    end
+
+    Browser --> NextUI
+    NextUI --> NextAPI
+    NextAPI --> Auth
+    NextAPI --> DB
+    NextAPI --> Worker
+
+    Analyzer --> Firecrawl
+    Analyzer --> Claude
+    Writer --> Tavily
+    Writer --> Claude
+    Writer --> WP
+
+    Provisioner --> DNS
+    Provisioner --> WP
+    WP --> MariaDB
+    WP --> R2
