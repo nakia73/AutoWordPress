@@ -25,8 +25,10 @@ export default function OnboardingWizard({ userId }: OnboardingWizardProps) {
   const [productDescription, setProductDescription] = useState('');
 
   const validateSubdomain = (value: string) => {
-    const regex = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
-    return regex.test(value) || value.length < 3;
+    // Subdomain: 3-63 chars, lowercase alphanumeric and hyphens, no leading/trailing hyphen
+    if (value.length < 3 || value.length > 63) return false;
+    const regex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+    return regex.test(value);
   };
 
   const handleSubdomainSubmit = async (e: React.FormEvent) => {
