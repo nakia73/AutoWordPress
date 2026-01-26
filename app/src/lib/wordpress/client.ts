@@ -1,0 +1,241 @@
+// Argo Note - WordPress REST API Client
+// Based on: docs/architecture/08_Integration_Risk_Report.md IR-007
+
+import type {
+  WPPostRequest,
+  WPPostResponse,
+  WPPostStatus,
+  WP_ERROR_HANDLERS,
+} from '@/types';
+
+type WPClientOptions = {
+  baseUrl: string;
+  applicationPassword: string;
+  username: string;
+};
+
+type WPMediaUploadResponse = {
+  id: number;
+  source_url: string;
+  media_details: {
+    width: number;
+    height: number;
+    file: string;
+  };
+};
+
+export class WordPressClient {
+  private baseUrl: string;
+  private authHeader: string;
+
+  constructor(options: WPClientOptions) {
+    this.baseUrl = options.baseUrl.replace(/\/$/, '');
+    // WordPress Application Password authentication
+    const credentials = Buffer.from(
+      `${options.username}:${options.applicationPassword}`
+    ).toString('base64');
+    this.authHeader = `Basic ${credentials}`;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}/wp-json/wp/v2${endpoint}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.authHeader,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error = new WordPressAPIError(
+        `WordPress API error: ${response.status} - ${errorText}`,
+        response.status,
+        errorText
+      );
+      throw error;
+    }
+
+    return response.json();
+  }
+
+  // Posts API
+  async createPost(post: WPPostRequest): Promise<WPPostResponse> {
+    return this.request<WPPostResponse>('/posts', {
+      method: 'POST',
+      body: JSON.stringify(post),
+    });
+  }
+
+  async updatePost(postId: number, post: Partial<WPPostRequest>): Promise<WPPostResponse> {
+    return this.request<WPPostResponse>(`/posts/${postId}`, {
+      method: 'PUT',
+      body: JSON.stringify(post),
+    });
+  }
+
+  async getPost(postId: number): Promise<WPPostResponse> {
+    return this.request<WPPostResponse>(`/posts/${postId}`);
+  }
+
+  async deletePost(postId: number, force = false): Promise<WPPostResponse> {
+    return this.request<WPPostResponse>(
+      `/posts/${postId}?force=${force}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  async listPosts(params?: {
+    page?: number;
+    per_page?: number;
+    status?: WPPostStatus | WPPostStatus[];
+  }): Promise<WPPostResponse[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.set('page', String(params.page));
+    if (params?.per_page) queryParams.set('per_page', String(params.per_page));
+    if (params?.status) {
+      const statuses = Array.isArray(params.status) ? params.status : [params.status];
+      queryParams.set('status', statuses.join(','));
+    }
+
+    const query = queryParams.toString();
+    return this.request<WPPostResponse[]>(`/posts${query ? `?${query}` : ''}`);
+  }
+
+  // Media API
+  async uploadMedia(
+    file: Buffer,
+    filename: string,
+    mimeType: string
+  ): Promise<WPMediaUploadResponse> {
+    const url = `${this.baseUrl}/wp-json/wp/v2/media`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Type': mimeType,
+        Authorization: this.authHeader,
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new WordPressAPIError(
+        `WordPress Media Upload error: ${response.status}`,
+        response.status,
+        errorText
+      );
+    }
+
+    return response.json();
+  }
+
+  // Categories API
+  async getCategories(): Promise<Array<{ id: number; name: string; slug: string }>> {
+    return this.request('/categories?per_page=100');
+  }
+
+  async createCategory(name: string, slug?: string): Promise<{ id: number; name: string; slug: string }> {
+    return this.request('/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name, slug }),
+    });
+  }
+
+  // Tags API
+  async getTags(): Promise<Array<{ id: number; name: string; slug: string }>> {
+    return this.request('/tags?per_page=100');
+  }
+
+  async createTag(name: string, slug?: string): Promise<{ id: number; name: string; slug: string }> {
+    return this.request('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ name, slug }),
+    });
+  }
+
+  // Health check
+  async checkConnection(): Promise<boolean> {
+    try {
+      await this.request('/users/me');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// Custom error class for WordPress API errors
+export class WordPressAPIError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public responseBody: string
+  ) {
+    super(message);
+    this.name = 'WordPressAPIError';
+  }
+
+  // Get recommended action based on status code
+  getRecommendedAction() {
+    const handlers: Record<number, { action: string; retry: boolean; message: string }> = {
+      401: {
+        action: 'notify_user',
+        retry: false,
+        message: 'WordPress認証が無効です。再接続してください。',
+      },
+      403: {
+        action: 'notify_user',
+        retry: false,
+        message: 'WordPress権限が不足しています。',
+      },
+      404: {
+        action: 'notify_user',
+        retry: false,
+        message: '指定されたリソースが見つかりません。',
+      },
+      500: {
+        action: 'retry_with_backoff',
+        retry: true,
+        message: 'WordPressサーバーエラー。しばらく待ってから再試行します。',
+      },
+      502: {
+        action: 'retry_with_backoff',
+        retry: true,
+        message: 'WordPress接続エラー。しばらく待ってから再試行します。',
+      },
+      503: {
+        action: 'retry_with_backoff',
+        retry: true,
+        message: 'WordPressが一時的に利用できません。しばらく待ってから再試行します。',
+      },
+    };
+
+    return handlers[this.statusCode] || {
+      action: 'notify_user',
+      retry: false,
+      message: `WordPress API エラー: ${this.statusCode}`,
+    };
+  }
+}
+
+// Factory function to create client from site data
+export function createWordPressClient(site: {
+  wpSiteUrl: string;
+  wpUsername: string;
+  wpApiToken: string;
+}): WordPressClient {
+  return new WordPressClient({
+    baseUrl: site.wpSiteUrl,
+    username: site.wpUsername,
+    applicationPassword: site.wpApiToken,
+  });
+}

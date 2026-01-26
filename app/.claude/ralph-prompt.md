@@ -87,22 +87,28 @@
 
 ```
 /ralph-loop "
-tasks.md読込→iter+1→⬜か🔧のタスク1つ実行→
+tasks.md読込→iter+1→⬜か🔧のタスク1つ選択→
 
-状態更新:
-- 修正あり→🔧（再実行対象）
-- 修正なし→✅（スキップ）
+【コードレビュー観点で実行】
+1. 実装の正確性（仕様通りか、ロジックに誤りがないか）
+2. エラーハンドリング（例外処理、境界値、null/undefined）
+3. セキュリティ（XSS, CSRF, SQLi, 認証認可、秘密情報漏洩）
+4. 型安全性（any回避、適切な型定義、null安全）
+5. エッジケース（空配列、空文字、0、負数、大量データ）
+6. パフォーマンス（N+1、メモリリーク、不要な再レンダリング）
+7. 可読性・保守性（命名、コメント、複雑度）
 
-問題発見/改善提案時:
-- changelog.mdに記録
-- tasks.mdに新タスク追加可
+【状態更新】
+- 問題なし→✅（備考に確認ポイント記載）
+- 問題発見/修正→🔧（備考に問題点・修正内容記載）
+- 新規問題→changelog.mdに記録+tasks.md追加
 
-変更ログ:
-- 全変更をchangelog.mdに記録
+【必須アクション】
+- 実行回数+1、最終iter記録
+- changelog.md更新
 - git commit（iter-N: task X.X.X 内容）
 
-終了条件:
-- 全タスク✅、build成功、未解決問題なし→MVP COMPLETE
+終了条件: 全✅、build成功、未解決問題なし→MVP COMPLETE
 " --max-iterations 1000 --completion-promise "MVP COMPLETE"
 ```
 

@@ -1,14 +1,392 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Argo Note - Prisma Schema
+// Based on: docs/architecture/02_Backend_Database.md
+// Integration fixes from: docs/architecture/08_Integration_Risk_Report.md
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Core Tables (MVP: Phase 1-4)
+// ============================================
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  name                String?
+  avatarUrl           String?   @map("avatar_url")
+
+  // Stripe Integration (Phase 5)
+  stripeCustomerId    String?   @map("stripe_customer_id")
+  subscriptionStatus  String    @default("trial") @map("subscription_status") // trial, active, past_due, canceled
+  subscriptionId      String?   @map("subscription_id")
+  currentPeriodEnd    DateTime? @map("current_period_end")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  sites               Site[]
+  products            Product[]
+  schedules           Schedule[]
+  billingHistory      BillingHistory[]
+  activityLogs        UserActivityLog[]
+
+  @@map("users")
+}
+
+model Site {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  slug          String    @unique // Subdomain: xxx.argonote.app
+
+  // WordPress connection
+  wpSiteUrl     String?   @map("wp_site_url") // Full URL: https://xxx.argonote.app
+  wpAdminUrl    String?   @map("wp_admin_url")
+  wpUsername    String?   @map("wp_username")
+  wpApiToken    String?   @map("wp_api_token") // Application Password - AES-256-GCM encrypted
+  wpConnectionStatus String? @map("wp_connection_status") // connected, error, auth_required
+
+  // Site settings
+  language      String    @default("en") // en, ja
+
+  // Status: pending, provisioning, provision_failed, active, suspended, deleted
+  // IR-025: Added pending, provision_failed, deleted
+  status        String    @default("pending")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products      Product[]
+  schedules     Schedule[]
+  customDomains CustomDomain[]
+
+  @@map("sites")
+}
+
+model Product {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  siteId          String    @map("site_id") // IR-034: NOT NULL
+  url             String
+  name            String?
+  description     String?
+
+  // ProductAnalysisResult (Phase A-E output) - IR-001
+  analysisResult  Json?     @map("analysis_result")
+
+  // Status: pending, analyzing, completed, failed
+  status          String    @default("pending")
+
+  // Image settings (Phase 7)
+  imageStyle      String    @default("illustration") @map("image_style")
+  colorTheme      String    @default("auto") @map("color_theme")
+  imageSize       String    @default("1200x630") @map("image_size")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  articleClusters ArticleCluster[]
+
+  @@map("products")
+}
+
+model ArticleCluster {
+  id            String    @id @default(uuid())
+  productId     String    @map("product_id")
+  pillarKeyword String?   @map("pillar_keyword")
+  status        String    @default("pending") // pending, generating, completed
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  articles      Article[]
+
+  @@map("article_clusters")
+}
+
+model Article {
+  id              String    @id @default(uuid())
+  clusterId       String    @map("cluster_id")
+  title           String?
+  targetKeyword   String?   @map("target_keyword") // IR-016
+  searchIntent    String?   @map("search_intent")  // IR-016
+  content         String?   // HTML - IR-008
+  metaDescription String?   @map("meta_description") @db.VarChar(160)
+  articleType     String    @default("article") @map("article_type") // article, faq, glossary
+
+  // Status: draft, generating, review, published, archived, failed
+  // IR-023: Added generating, review, failed
+  status          String    @default("draft")
+
+  wpPostId        Int?      @map("wp_post_id")
+  publishedAt     DateTime? @map("published_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  cluster         ArticleCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  generatedImages GeneratedImage[]
+  generationLogs  ArticleGenerationLog[]
+
+  @@map("articles")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+
+  // Job type: ANALYZE_PRODUCT, GENERATE_ARTICLE, SYNC_WP, PROVISION_BLOG
+  jobType       String    @map("job_type")
+
+  // JobPayload - IR-002
+  payload       Json?
+
+  // Status: pending, processing, completed, failed
+  status        String    @default("pending")
+  priority      Int       @default(0)
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3) @map("max_attempts")
+  errorMessage  String?   @map("error_message")
+
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  scheduleJobs  ScheduleJob[]
+  generationLogs ArticleGenerationLog[]
+
+  @@map("jobs")
+}
+
+// ============================================
+// Automation (Phase 4 - MVP Required)
+// ============================================
+
+model Schedule {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  siteId          String?   @map("site_id")
+  cronExpression  String?   @map("cron_expression") // "0 9 * * 1,3,5"
+  articlesPerRun  Int       @default(1) @map("articles_per_run")
+  publishMode     String    @default("publish") @map("publish_mode") // publish, draft
+  isActive        Boolean   @default(true) @map("is_active")
+  nextRunAt       DateTime? @map("next_run_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site            Site?     @relation(fields: [siteId], references: [id])
+  scheduleJobs    ScheduleJob[]
+
+  @@map("schedules")
+}
+
+model ScheduleJob {
+  id                String    @id @default(uuid())
+  scheduleId        String    @map("schedule_id")
+  jobId             String?   @map("job_id") // IR-010
+
+  // Status: pending, running, completed, failed - IR-024
+  status            String    @default("pending")
+
+  startedAt         DateTime? @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  articlesGenerated Int?      @map("articles_generated")
+  generationDetails Json?     @map("generation_details") // IR-013
+  errorMessage      String?   @map("error_message")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  schedule          Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  job               Job?      @relation(fields: [jobId], references: [id])
+
+  @@map("schedule_jobs")
+}
+
+// ============================================
+// Billing (Phase 5)
+// ============================================
+
+model BillingHistory {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  stripeInvoiceId String?   @map("stripe_invoice_id")
+  amountCents     Int?      @map("amount_cents") // IR-032: Stripe unit
+  currency        String    @default("jpy")
+  status          String?   // paid, failed, refunded
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("billing_history")
+}
+
+// ============================================
+// Visual (Phase 7)
+// ============================================
+
+model GeneratedImage {
+  id          String    @id @default(uuid())
+  articleId   String    @map("article_id")
+  prompt      String?
+  imageUrl    String?   @map("image_url")
+  r2ObjectKey String?   @map("r2_object_key")
+  sectionRef  String?   @map("section_ref") // H2 reference
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  article     Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("generated_images")
+}
+
+// ============================================
+// Custom Domain (Phase 8)
+// ============================================
+
+model CustomDomain {
+  id              String    @id @default(uuid())
+  siteId          String    @map("site_id")
+  domain          String    @unique
+  verificationKey String?   @map("verification_key")
+  sslStatus       String    @default("pending") @map("ssl_status") // pending, active, failed
+  verifiedAt      DateTime? @map("verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("custom_domains")
+}
+
+// ============================================
+// Prompt Intelligence (Phase 15)
+// ============================================
+
+model PromptTemplate {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  description   String?
+  promptText    String    @map("prompt_text")
+  version       Int       @default(1)
+  isActive      Boolean   @default(true) @map("is_active")
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  generationLogs ArticleGenerationLog[]
+  abTestVariants ABTestVariant[]
+
+  @@map("prompt_templates")
+}
+
+model ArticleGenerationLog {
+  id               String    @id @default(uuid())
+  articleId        String    @map("article_id")
+  jobId            String?   @map("job_id") // IR-028
+  promptTemplateId String?   @map("prompt_template_id")
+  modelUsed        String?   @map("model_used")
+  inputTokens      Int?      @map("input_tokens")
+  outputTokens     Int?      @map("output_tokens")
+  generationTimeMs Int?      @map("generation_time_ms")
+  costUsd          Decimal?  @map("cost_usd") @db.Decimal(10, 6)
+
+  // Fact check results (CI-001)
+  factCheckPassed  Boolean?  @map("fact_check_passed")
+  factCheckIssues  Json?     @map("fact_check_issues") // String array of issues
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  article          Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  job              Job?      @relation(fields: [jobId], references: [id])
+  promptTemplate   PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
+
+  @@map("article_generation_logs")
+}
+
+model ABTest {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  status      String    @default("draft") // draft, running, completed
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  variants    ABTestVariant[]
+
+  @@map("ab_tests")
+}
+
+model ABTestVariant {
+  id               String    @id @default(uuid())
+  testId           String    @map("test_id")
+  promptTemplateId String    @map("prompt_template_id")
+  weight           Int       @default(50) // Percentage allocation
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  test             ABTest         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  promptTemplate   PromptTemplate @relation(fields: [promptTemplateId], references: [id])
+
+  @@map("ab_test_variants")
+}
+
+// ============================================
+// Logging & Audit (IR-043, IR-044, IR-045)
+// ============================================
+
+model UserActivityLog {
+  id          String    @id @default(uuid())
+  userId      String?   @map("user_id")
+  action      String    // 'article.delete', 'schedule.update'
+  targetType  String?   @map("target_type") // 'article', 'schedule', 'site'
+  targetId    String?   @map("target_id")
+  metadata    Json?
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("user_activity_logs")
+}
+
+model DeletionLog {
+  id          String    @id @default(uuid())
+  tableName   String    @map("table_name")
+  recordId    String    @map("record_id")
+  deletedBy   String?   @map("deleted_by")
+  reason      String?
+  backupData  Json?     @map("backup_data")
+  deletedAt   DateTime  @default(now()) @map("deleted_at")
+
+  @@map("deletion_logs")
+}
+
+model StripeWebhookLog {
+  id              String    @id @default(uuid())
+  eventId         String    @unique @map("event_id")
+  eventType       String    @map("event_type")
+  payload         Json?
+  signatureValid  Boolean?  @map("signature_valid")
+  processed       Boolean   @default(false)
+  errorMessage    String?   @map("error_message")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("stripe_webhook_logs")
 }
