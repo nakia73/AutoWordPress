@@ -29,6 +29,7 @@ docs/
 ├── TASK_MANAGEMENT.md        # タスク管理
 ├── CONCEPT_DECISIONS.md      # 全決定事項の記録
 ├── DEVELOPMENT_ROADMAP.md    # 開発ロードマップ
+├── USER_INPUT_LOG.md         # ユーザー入力ログ（原文保存）
 │
 ├── architecture/             # 技術仕様書
 │   ├── 00_Master_Architecture.md    # 全体アーキテクチャ
@@ -38,7 +39,10 @@ docs/
 │   ├── 04_AI_Pipeline.md            # AIパイプライン仕様
 │   ├── 05_Sequence_Diagrams.md      # シーケンス図
 │   ├── 06_Multisite_feasibility.md  # Multisite採用検討
-│   └── 07_WordPress_Multisite_Guide.md  # Multisite実装ガイド
+│   ├── 07_WordPress_Multisite_Guide.md  # Multisite実装ガイド
+│   ├── 08_Integration_Risk_Report.md    # 整合性リスクレポート
+│   ├── 09_Critical_Issues_Report.md     # 致命的問題点レポート（10イテレーション）
+│   └── 10_Comprehensive_Critical_Issues_Report.md  # 包括的問題点レポート（50イテレーション）
 │
 └── phases/                   # 開発フェーズ詳細
     ├── Phase0_Mockup.md            # モックアップ・コンセプト検証

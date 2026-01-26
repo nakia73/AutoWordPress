@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, Sparkles, ArrowRight } from "lucide-react";
+import { Menu, Sparkles, ArrowRight, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -15,9 +15,10 @@ const navItems = [
 
 interface HeaderProps {
   onStartDemo?: () => void;
+  onNavigateToArchitecture?: () => void;
 }
 
-export default function Header({ onStartDemo }: HeaderProps) {
+export default function Header({ onStartDemo, onNavigateToArchitecture }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleGetStarted = () => {
@@ -26,6 +27,13 @@ export default function Header({ onStartDemo }: HeaderProps) {
     } else {
       // Scroll to hero section
       document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleArchitectureClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onNavigateToArchitecture) {
+      onNavigateToArchitecture();
     }
   };
 
@@ -84,6 +92,26 @@ export default function Header({ onStartDemo }: HeaderProps) {
                 />
               </motion.a>
             ))}
+            {/* Architecture Link - Special navigation */}
+            <motion.a
+              href="#architecture"
+              onClick={handleArchitectureClick}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + navItems.length * 0.05 }}
+              className="relative text-sm text-muted-foreground hover:text-primary transition-colors group flex items-center gap-1.5"
+              whileHover={{ y: -2 }}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Architecture
+              {/* Animated underline */}
+              <motion.span
+                className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-primary/80 to-primary"
+                initial={{ width: 0 }}
+                whileHover={{ width: "100%" }}
+                transition={{ duration: 0.3 }}
+              />
+            </motion.a>
           </nav>
 
           {/* CTA Button */}
@@ -183,6 +211,33 @@ export default function Header({ onStartDemo }: HeaderProps) {
                     </motion.span>
                   </motion.a>
                 ))}
+                {/* Architecture Link - Mobile */}
+                <motion.a
+                  href="#architecture"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsOpen(false);
+                    if (onNavigateToArchitecture) {
+                      onNavigateToArchitecture();
+                    }
+                  }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + navItems.length * 0.08 }}
+                  whileHover={{ x: 8 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="text-lg text-muted-foreground hover:text-primary transition-colors py-3 px-3 rounded-lg flex items-center gap-3 group hover:bg-primary/5 border-t border-border/30 mt-2 pt-4"
+                >
+                  <Layers className="w-4 h-4 text-primary" />
+                  Architecture
+                  <motion.span
+                    className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                    initial={{ x: -5 }}
+                    whileHover={{ x: 0 }}
+                  >
+                    <ArrowRight className="w-4 h-4 text-primary" />
+                  </motion.span>
+                </motion.a>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

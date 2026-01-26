@@ -37,9 +37,11 @@ type ViewState = "landing" | "setup" | "onboarding" | "dashboard";
 export default function Home() {
   const [view, setView] = useState<ViewState>("landing");
   const [demoUrl, setDemoUrl] = useState("");
+  const [initialDashboardPage, setInitialDashboardPage] = useState<string | undefined>();
 
   const handleStartDemo = (url?: string) => {
     setDemoUrl(url || "https://example.com");
+    setInitialDashboardPage(undefined);
     setView("setup");
   };
 
@@ -54,11 +56,18 @@ export default function Home() {
   const handleBackToLanding = () => {
     setView("landing");
     setDemoUrl("");
+    setInitialDashboardPage(undefined);
+  };
+
+  // Navigate directly to Architecture page
+  const handleNavigateToArchitecture = () => {
+    setInitialDashboardPage("architecture");
+    setView("dashboard");
   };
 
   // Dashboard View
   if (view === "dashboard") {
-    return <DashboardLayout onBackToLanding={handleBackToLanding} />;
+    return <DashboardLayout onBackToLanding={handleBackToLanding} initialPage={initialDashboardPage} />;
   }
 
   return (
@@ -67,7 +76,7 @@ export default function Home() {
       <SkipLink />
 
       {/* Landing Page */}
-      <Header onStartDemo={() => handleStartDemo()} />
+      <Header onStartDemo={() => handleStartDemo()} onNavigateToArchitecture={handleNavigateToArchitecture} />
       <main id="main-content" role="main" aria-label="Main content">
         <Hero onStartDemo={handleStartDemo} />
         <Problems />

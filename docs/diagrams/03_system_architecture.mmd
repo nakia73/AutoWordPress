@@ -20,7 +20,7 @@ flowchart TB
     end
 
     subgraph AI["🤖 AI APIs"]
-        Claude[Claude 3.5 Sonnet]
+        Gemini[Gemini 3.0 Pro]
         Firecrawl[Firecrawl]
         Tavily[Tavily Search]
     end
@@ -42,9 +42,9 @@ flowchart TB
     NextAPI --> Worker
 
     Analyzer --> Firecrawl
-    Analyzer --> Claude
+    Analyzer --> Gemini
     Writer --> Tavily
-    Writer --> Claude
+    Writer --> Gemini
     Writer --> WP
 
     Provisioner --> DNS

@@ -10,6 +10,7 @@ import ContentSuggestions from "./ContentSuggestions";
 import SchedulePage from "./SchedulePage";
 import AnalyticsPage from "./AnalyticsPage";
 import SettingsPage from "./SettingsPage";
+import ArchitecturePage from "./ArchitecturePage";
 import ArticleGenerator from "./ArticleGenerator";
 import PublishingAnimation from "./PublishingAnimation";
 import WordPressAdmin from "./WordPressAdmin";
@@ -23,10 +24,12 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   schedule: { title: "Schedule", subtitle: "Manage your publishing calendar" },
   analytics: { title: "Analytics", subtitle: "Track your blog performance" },
   settings: { title: "Settings", subtitle: "Configure your preferences" },
+  architecture: { title: "Architecture", subtitle: "System architecture diagrams and issues" },
 };
 
 interface DashboardLayoutProps {
   onBackToLanding?: () => void;
+  initialPage?: string;
 }
 
 // Mock article content for the WordPress flow
@@ -37,8 +40,8 @@ const mockPublishedArticle = {
 
 type OverlayView = "none" | "publishing" | "wp-admin" | "public-preview";
 
-export default function DashboardLayout({ onBackToLanding }: DashboardLayoutProps) {
-  const [currentPage, setCurrentPage] = useState("dashboard");
+export default function DashboardLayout({ onBackToLanding, initialPage }: DashboardLayoutProps) {
+  const [currentPage, setCurrentPage] = useState(initialPage || "dashboard");
   const [showGenerator, setShowGenerator] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<{
     title: string;
@@ -192,6 +195,19 @@ export default function DashboardLayout({ onBackToLanding }: DashboardLayoutProp
               >
                 <CardErrorBoundary>
                   <SettingsPage />
+                </CardErrorBoundary>
+              </motion.div>
+            )}
+            {currentPage === "architecture" && (
+              <motion.div
+                key="architecture"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <CardErrorBoundary>
+                  <ArchitecturePage onNavigate={handleNavigate} />
                 </CardErrorBoundary>
               </motion.div>
             )}

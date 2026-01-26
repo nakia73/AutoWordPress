@@ -7,7 +7,23 @@
 > **実施週:** Week 2
 
 **テーマ:** Intelligent Engine
-**ゴール:** 「プロダクトURLを入力するだけで、適切なターゲットを分析し、最適なSEO記事を生成してWordPressに投稿する」という一連のコアフローを実現する。
+**ゴール:** 「プロダクト情報を入力し、AIが記事を生成してWordPressに投稿する」という一連のコアフローを実現する。
+
+---
+
+## 0. 既存資産の活用（MVP実装方針）
+
+> **重要:** 以下の既存プログラムを流用してMVP開発を効率化する
+
+| 資産 | 内容 | MVP利用 |
+|------|------|---------|
+| **Tavily → LLM記事生成** | 記事コンセプトをTavily APIで検索し、取得情報をもとにLLMで記事生成 | ✅ 流用 |
+| **Nanobana Pro画像生成** | H2見出しごとのセクションを参照し、見出し画像を生成 | ✅ MVPに含める |
+
+**MVPで後回しにするもの:**
+- キーワード調査API（Keywords Everywhere / DataForSEO）
+- 競合分析API
+- Firecrawl（URL自動クロール）
 
 ---
 
@@ -19,13 +35,15 @@
 
 ## 2. 実装ステップ
 
-### Step 1: プロダクト分析エンジン (Firecrawl + LLM)
+### Step 1: プロダクト情報入力
 
-- **Firecrawl API**（プライマリ）/ **Jina Reader**（フォールバック）を使用して、ユーザーが入力したURLからサイト全体の文字情報をスクレイピング。
-- 取得した情報を **Gemini 3.0 Pro**（ソフトコーディング）に渡し、以下の属性を抽出。
-  - **ターゲット像:** 誰がそのプロダクトを使うべきか（ペルソナ）。
-  - **キーワード:** どのような検索意図でプロダクトが発見されるべきか。
-  - **記事クラスター案:** サイト全体のSEO評価を上げるための関連トピック群。
+**MVP実装:**
+- ユーザーがプロダクト情報（名称、概要、ターゲット等）を入力
+- 入力情報をもとにLLMでペルソナ・キーワード候補を生成
+
+**将来拡張（MVP後）:**
+- Firecrawl API / Jina Readerを使用したURL自動クロール
+- URLからサイト全体の情報を自動抽出
 
 **出力例:**
 
@@ -84,13 +102,14 @@ const response = await fetch(`https://${siteSlug}.argonote.app/wp-json/wp/v2/pos
 
 ## 3. 技術スタック
 
-| コンポーネント | 技術 |
-|---------------|------|
-| Web Scraping | **Firecrawl API** (primary) + Jina Reader (fallback) |
-| Semantic Search | Tavily API |
-| LLM | **Gemini 3.0 Pro** (via LiteLLM) ※ソフトコーディング |
-| Worker/Queue | **Inngest** (長時間処理・自動リトライ対応) |
-| Database | **Supabase (PostgreSQL)** |
+| コンポーネント | 技術 | MVP |
+|---------------|------|-----|
+| Semantic Search | **Tavily API** | ✅ |
+| LLM | **Gemini 3.0 Pro** (via LiteLLM) | ✅ |
+| Image Generation | **Nanobana Pro**（見出し画像生成） | ✅ |
+| Worker/Queue | **Inngest** (長時間処理・自動リトライ対応) | ✅ |
+| Database | **Supabase (PostgreSQL)** | ✅ |
+| Web Scraping | Firecrawl API / Jina Reader | 後回し |
 
 ---
 

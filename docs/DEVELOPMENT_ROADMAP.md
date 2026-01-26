@@ -23,7 +23,10 @@ docs/
 │   ├── 04_AI_Pipeline.md           # AI処理パイプライン仕様
 │   ├── 05_Sequence_Diagrams.md     # システムシーケンス図
 │   ├── 06_Multisite_feasibility.md # Multisite採用検討
-│   └── 07_WordPress_Multisite_Guide.md # Multisite実装ガイド
+│   ├── 07_WordPress_Multisite_Guide.md # Multisite実装ガイド
+│   ├── 08_Integration_Risk_Report.md  # 整合性リスクレポート
+│   ├── 09_Critical_Issues_Report.md   # 致命的問題点レポート（10イテレーション）
+│   └── 10_Comprehensive_Critical_Issues_Report.md  # 包括的問題点レポート（50イテレーション）
 └── phases/                   # 開発フェーズ詳細（WHAT & WHEN）
     ├── Phase0_Mockup.md      # モックアップ・集客
     ├── Phase1_Infrastructure.md  # インフラ基盤構築
@@ -50,7 +53,7 @@ docs/
 | [Phase 3](./phases/Phase3_UserInterface.md) | User Interface | Onboarding & Control | オンボーディング・ダッシュボード | Week 3 |
 | [Phase 4](./phases/Phase4_Automation.md) | Automation | Hands-Free | **スケジュール自動化・通知（MVP必須）** | Week 3 |
 | [Phase 5](./phases/Phase5_Monetization.md) | Monetization | Sustainability | Stripe決済・サブスクリプション管理 | Week 4 |
-| [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | 10社限定ベータリリース・フィードバック収集 | Week 4 |
+| [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | ベータリリース・フィードバック収集 | Week 4 |
 
 ### 成長フェーズ（Phase 7-15）【ベータフィードバック後】
 
@@ -129,6 +132,9 @@ docs/
 - [05. シーケンス図](./architecture/05_Sequence_Diagrams.md) - 処理フロー詳細
 - [06. Multisite検討](./architecture/06_Multisite_feasibility.md) - アーキテクチャ決定根拠
 - [07. Multisiteガイド](./architecture/07_WordPress_Multisite_Guide.md) - 実装詳細・セキュリティ設計
+- [08. 整合性リスクレポート](./architecture/08_Integration_Risk_Report.md) - 仕様間の整合性分析
+- [09. 致命的問題点レポート](./architecture/09_Critical_Issues_Report.md) - First Principles分析結果（10イテレーション）
+- [10. 包括的問題点レポート](./architecture/10_Comprehensive_Critical_Issues_Report.md) - First Principles分析結果（50イテレーション）
 
 ### 開発フェーズ詳細（Phases）
 

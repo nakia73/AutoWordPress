@@ -6,7 +6,7 @@ sequenceDiagram
     participant Inngest as Inngest (Worker)
     participant Analyzer as AI Worker (Product Analysis)
     participant Provisioner as WP Provisioning Worker
-    participant External as External APIs (Claude/Firecrawl)
+    participant External as External APIs (Gemini/Firecrawl)
     participant Cloudflare as Cloudflare API
     participant VPS as DigitalOcean VPS
 
@@ -20,7 +20,7 @@ sequenceDiagram
         Analyzer->>Inngest: Job取得
         Analyzer->>External: FirecrawlでURL解析
         External-->>Analyzer: 解析結果
-        Analyzer->>External: Claudeでペルソナ・クラスター生成
+        Analyzer->>External: Geminiでペルソナ・クラスター生成
         External-->>Analyzer: 分析結果 (JSON)
         Analyzer->>DB: ProductAnalysis保存 & Status更新
         Analyzer->>Inngest: Job: PROVISION_BLOG 追加

@@ -14,6 +14,7 @@ import {
   Calendar,
   Menu,
   X,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const menuItems = [
   { id: "suggestions", label: "Content Ideas", icon: Lightbulb },
   { id: "schedule", label: "Schedule", icon: Calendar },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "architecture", label: "Architecture", icon: Layers },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
