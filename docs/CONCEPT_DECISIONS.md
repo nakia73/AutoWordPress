@@ -1,9 +1,9 @@
 # Argo Note - コンセプト確定シート
 
-**Version:** 2.6
+**Version:** 2.7
 **作成日:** 2026年1月25日
 **最終更新:** 2026年1月26日
-**ステータス:** ヒアリング進行中
+**ステータス:** コア設計完了
 
 ---
 
@@ -750,6 +750,24 @@ Step 6: 本開発開始（Phase 1〜）
 
 ---
 
+#### E0. インフラ全体構成
+
+**決定事項: WordPress Multisite + Cloudflare統合**
+
+| コンポーネント | 技術 | 理由 |
+|---------------|------|------|
+| WordPress | Multisite on DigitalOcean VPS | 複数サイトを効率的に管理 |
+| コンテナ | Docker Compose | 環境の再現性・ポータビリティ |
+| CDN | Cloudflare | 高速化・DDoS防御 |
+| SSL | Cloudflare SSL | 全サブドメインでHTTPS |
+| WAF | Cloudflare WAF | セキュリティ強化 |
+| DNS | Cloudflare DNS | ワイルドカードDNS対応 |
+| ストレージ | Cloudflare R2 | メディアファイル配信（S3互換） |
+
+**詳細:** [インフラ仕様](./architecture/03_Infrastructure_Ops.md) | [WordPress Multisite実装ガイド](./architecture/07_WordPress_Multisite_Guide.md)
+
+---
+
 #### E1. 認証方式（Q7回答）
 
 **決定事項: Supabase Auth**
@@ -1135,16 +1153,23 @@ Step 6: 本開発開始（Phase 1〜）
 
 #### H1. 実装順序変更（Q33回答）
 
-**決定事項: 認証を先に実装**
+**決定事項: 認証を先に実装、ブランディングをPhase 0.5で実施**
 
 ```
-Phase 1: Infrastructure + 認証基盤
-Phase 2: Core AI
-Phase 3: User Interface（認証以外）
-Phase 4: 自動化機能（追加）
-Phase 5: Monetization
-Phase 6: MVP Launch
+Phase 0:   Mockup（コンセプト検証）
+Phase 0.5: MVP Branding（LP用ブランディング）
+Phase 1:   Infrastructure + 認証基盤
+Phase 2:   Core AI
+Phase 3:   User Interface（認証以外）
+Phase 4:   自動化機能（追加）
+Phase 5:   Monetization
+Phase 6:   MVP Launch
 ```
+
+**Phase 0.5の位置づけ:**
+- Phase 0のモックアップ検証後、Phase 1の本開発開始前に実施
+- LP公開に必要な90%以上の完成度を持つブランドアセットを作成
+- 詳細: [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md)
 
 #### H2. 獲得チャネル（Q34回答）
 
@@ -1248,6 +1273,44 @@ Phase 6: MVP Launch
 
 **決定事項: MVPからスタート**
 - ドメイン：blog.argonote.app
+
+#### H17. ブランディング戦略（二段階アプローチ）
+
+**決定事項: MVP用ブランディングとブランド進化を分離**
+
+本プロジェクトでは、ブランディングを**二段階**に分けて実施する。
+
+**理由:**
+- Phase 0（モックアップ）段階でフルブランディングに投資するのは非効率
+- しかしLP公開時点で90%以上のクオリティが必要
+- 市場からのフィードバックを受けてブランドを進化させる余地を残す
+
+**Phase 0.5: MVP Branding（LP用ブランディング）**
+
+| 成果物 | 説明 |
+|--------|------|
+| ロゴ | AIロゴジェネレーター（Looka等）で作成、90%以上の完成度 |
+| カラーパレット | プライマリ・セカンダリ・アクセント色を定義 |
+| タイポグラフィ | フォントファミリー選定 |
+| OGP画像 | SNSシェア用画像テンプレート |
+| ファビコン | ブラウザタブ用アイコン |
+
+**Phase 13: Brand Evolution（ブランド進化）**
+
+| 施策 | 説明 |
+|------|------|
+| ロゴリファイン | プロデザイナーによる洗練（予算確保後） |
+| ブランドガイドライン | 詳細な使用ルールを文書化 |
+| アニメーション | ローディング・マイクロインタラクション |
+| 拡張アセット | プレゼン資料、名刺、SNSバナー |
+
+**判断基準:**
+- Phase 0.5完了時: 「信頼できそうなサービス」という印象を与えられるか
+- Phase 13実施時: MRR $1,000達成、またはユーザー100人到達後
+
+**詳細:**
+- [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md)
+- [Phase 13: Brand Identity](./phases/Phase13_BrandIdentity.md)
 
 #### H16. VPSプロバイダ（Q60回答）
 
@@ -1396,6 +1459,7 @@ Phase 6: MVP Launch
 | 2026-01-26 | 2.4 | **ターゲティング強化:** B1-B2にバイブコーダー向け価値訴求を追加。A1に「機能的価値のみを訴求しない」方針を明記。E6をGemini 3.0 Pro（ソフトコーディング）に更新 |
 | 2026-01-26 | 2.5 | **コアコンセプト完成:** A3（ワンラインピッチ）、A5（原体験）、A6（5年後のビジョン）を追加。B12（成功の定義）、B13（期待値コントロール）を追加。「AI時代のデファクトスタンダード」「クオリティ重視」の思想を明文化 |
 | 2026-01-26 | 2.6 | **グローバル・フリーミアム方針追加:** B14（地域：グローバル、英語デフォルト）、B15（クオリティ戦略MVP vs 将来）、D7（フリーミアムモデル）を追加。制限方式は検討課題として残す |
+| 2026-01-26 | 2.7 | **設計完成度向上:** H1にPhase 0.5追加、H17（ブランディング戦略：二段階アプローチ）追加、E0（インフラ全体構成）追加。ステータスを「コア設計完了」に変更 |
 
 ---
 
