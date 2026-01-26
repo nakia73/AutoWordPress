@@ -84,7 +84,7 @@ export default function Footer() {
                   transition={{ duration: 2, repeat: Infinity }}
                 />
               </motion.div>
-              <span className="text-lg font-bold gold-text-gradient gold-shimmer">
+              <span className="text-lg font-bold gold-text-shimmer">
                 Argo Note
               </span>
             </motion.a>

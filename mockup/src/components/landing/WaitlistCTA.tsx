@@ -149,7 +149,7 @@ export default function WaitlistCTA() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
             <span className="text-foreground">Ready to Put Your Blog on</span>
             <br />
-            <span className="gold-text-gradient gold-shimmer">Autopilot?</span>
+            <span className="gold-text-shimmer">Autopilot?</span>
           </h2>
 
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">

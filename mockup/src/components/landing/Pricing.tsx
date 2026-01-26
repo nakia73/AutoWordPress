@@ -92,7 +92,7 @@ export default function Pricing() {
                   transition={{ type: "spring", stiffness: 200 }}
                 >
                   <motion.span
-                    className="text-5xl font-bold gold-text-gradient gold-shimmer inline-block"
+                    className="text-5xl font-bold gold-text-shimmer inline-block"
                     whileHover={{ scale: 1.1 }}
                   >
                     $20

@@ -97,7 +97,7 @@ export default function Hero({ onStartDemo }: HeroProps) {
         >
           <span className="text-foreground">Your AI-Powered Blog.</span>
           <br />
-          <span className="gold-text-gradient gold-shimmer bg-clip-text">
+          <span className="gold-text-shimmer">
             Fully Automated.
           </span>
         </motion.h1>

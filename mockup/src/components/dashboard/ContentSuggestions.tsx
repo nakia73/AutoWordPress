@@ -445,7 +445,7 @@ export default function ContentSuggestions({
                         transition={{ delay: index * 0.1 + 0.2 }}
                       >
                         <motion.p
-                          className="text-3xl font-bold gold-text-gradient gold-shimmer"
+                          className="text-3xl font-bold gold-text-shimmer"
                           whileHover={{ scale: 1.1 }}
                         >
                           {suggestion.relevance}%

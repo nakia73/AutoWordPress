@@ -141,7 +141,7 @@
   border-image: linear-gradient(135deg, #B8860B, #D4AF37, #F4D03F, #D4AF37, #B8860B) 1;
 }
 
-/* Metallic gold shimmer effect */
+/* Metallic gold shimmer effect for backgrounds */
 .gold-shimmer {
   background: linear-gradient(
     110deg,
@@ -154,6 +154,25 @@
     #B8860B 100%
   );
   background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Metallic gold shimmer effect for TEXT */
+.gold-text-shimmer {
+  background: linear-gradient(
+    110deg,
+    #B8860B 0%,
+    #D4AF37 20%,
+    #F4D03F 40%,
+    #FFFACD 50%,
+    #F4D03F 60%,
+    #D4AF37 80%,
+    #B8860B 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   animation: shimmer 3s ease-in-out infinite;
 }
 
