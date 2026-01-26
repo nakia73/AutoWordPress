@@ -512,9 +512,612 @@ ALTER TABLE articles ADD COLUMN cluster_id UUID REFERENCES article_clusters(id);
 
 ---
 
+---
+
+# Part 2: 微視的不整合分析（詳細版）
+
+> **追記日:** 2026年1月26日
+> **分析観点:** 15項目 × 全ドキュメント精査
+> **発見件数:** 28件の不整合
+
+---
+
+## 1. 数値の不整合
+
+### IR-018: リトライ間隔の矛盾
+
+| ドキュメント | リトライ間隔 | 対象処理 | 行番号 |
+|------------|------------|---------|--------|
+| `02_Backend_Database.md` | 1分→5分→15分 | 記事生成全般 | 382 |
+| `04_AI_Pipeline.md` | 1分→5分→15分 | 記事生成全般 | 281 |
+| `CONCEPT_DECISIONS.md` | 1分→5分→15分 | 記事生成 | 1016 |
+| **`CONCEPT_DECISIONS.md`** | **1分→5分→30分** | **WordPress投稿失敗時** | **1038** |
+
+**問題:**
+- WordPress投稿失敗時のみ最終間隔が30分（他は15分）
+- 実装時にどの間隔を採用すべきか不明確
+
+**対応方針:** リトライ間隔を統一（1分→5分→15分）
+
+**対応期限:** Phase 1 開始前
+
+---
+
+### IR-019: タイムアウト値の矛盾
+
+| ドキュメント | 値 | 対象 |
+|------------|-----|------|
+| `04_AI_Pipeline.md:254` | 30秒 | LLM_TIMEOUT_SECONDS |
+| `02_Backend_Database.md:380` | 10分/記事 | 記事生成タイムアウト |
+
+**問題:**
+- LLMタイムアウト30秒 vs 記事生成全体10分の関係が不明
+- 1記事生成で何回LLM呼び出しが発生するか未定義
+
+**対応方針:**
+```
+LLM単一呼び出し: 30秒
+記事生成全体（複数LLM呼び出し含む）: 10分
+→ 1記事あたり最大20回のLLM呼び出しを想定
+```
+
+---
+
+## 2. 命名規則の不統一
+
+### IR-020: ステータスカラム命名の不統一
+
+| テーブル | カラム名 | 問題 |
+|---------|---------|------|
+| users | `subscription_status` | プレフィックス付き |
+| sites | `status` | プレフィックスなし |
+| articles | `status` | プレフィックスなし |
+| jobs | `status` | プレフィックスなし |
+
+**対応方針:** 全て `status` に統一（users テーブルのみ例外として許容）
+
+---
+
+### IR-021: イベント/ジョブ名の不統一
+
+| 呼称 | ドキュメント | ケース |
+|------|------------|--------|
+| `WRITE_ARTICLE` | `04_AI_Pipeline.md:119` | SCREAMING_SNAKE |
+| `GENERATE_ARTICLE` | `02_Backend_Database.md:144` | SCREAMING_SNAKE |
+| `generate-for-${user.id}` | `Phase4_Automation.md:92` | kebab-case |
+
+**問題:** 同じ「記事生成」処理が3種類の名称で呼ばれている
+
+**対応方針:**
+```
+job_type (DB): SCREAMING_SNAKE_CASE（GENERATE_ARTICLE）
+Inngest event: kebab-case（article/generate）
+関数名: camelCase（generateArticle）
+```
+
+---
+
+### IR-022: タイムスタンプカラム名の不統一
+
+| パターン | 例 |
+|---------|-----|
+| 標準 | `created_at`, `updated_at` |
+| 非標準 | `collected_at`, `calculated_at`, `published_at` |
+
+**対応方針:**
+- 作成/更新: `created_at`, `updated_at`
+- ドメイン固有: `published_at`, `collected_at` は許容
+
+---
+
+## 3. ENUMの不一致
+
+### IR-023: `articles.status` の値の矛盾
+
+**現在の定義（02_Backend_Database.md:135）:**
+```sql
+status VARCHAR(50) DEFAULT 'draft'  -- draft, published, archived
+```
+
+**必要な値:**
+```
+draft, generating, review, published, archived, failed
+```
+
+**欠落:** `generating`, `review`, `failed`
+
+**影響:**
+- Phase 2 実装時にユーザーが記事生成中かどうか判定不可
+- UI層が生成進捗を表示できない
+
+**対応期限:** Phase 2 開始前
+
+---
+
+### IR-024: `schedule_jobs.status` の不一致
+
+| ドキュメント | 定義値 |
+|------------|-------|
+| `02_Backend_Database.md:193` | queued, running, completed, failed |
+| 本レポート IR-013 | pending, running, completed, failed |
+
+**問題:** `queued` vs `pending` の不統一
+
+**対応方針:** `pending` に統一（Inngest との整合性）
+
+---
+
+### IR-025: `sites.status` の欠落値
+
+**現在:**
+```
+provisioning, active, suspended
+```
+
+**必要:**
+```
+pending, provisioning, provision_failed, active, suspended, deleted
+```
+
+**欠落:** `pending`, `provision_failed`, `deleted`
+
+---
+
+### IR-026: VARCHAR サイズの不統一
+
+| テーブル | 型 |
+|---------|-----|
+| users.subscription_status | VARCHAR(50) |
+| sites.status | VARCHAR(50) |
+| schedule_jobs.status | **VARCHAR(20)** |
+| ab_tests.status | **VARCHAR(20)** |
+
+**問題:** VARCHAR(20) では `provision_failed`（16文字）が入らない可能性
+
+**対応方針:** 全て VARCHAR(50) に統一
+
+---
+
+## 4. 外部キー参照の欠落
+
+### IR-027: `products.site_id` の ON DELETE 未指定
+
+**現在（02_Backend_Database.md:106）:**
+```sql
+site_id UUID REFERENCES sites(id),  -- ON DELETE 指定なし
+```
+
+**問題:** サイト削除時の動作が不定
+
+**対応方針:**
+```sql
+site_id UUID REFERENCES sites(id) ON DELETE SET NULL
+```
+
+---
+
+### IR-028: `article_generation_logs` → `jobs` の外部キー欠落
+
+**問題:** ジョブの実行ログがどの非同期ジョブに対応するか不明
+
+**対応方針:**
+```sql
+ALTER TABLE article_generation_logs
+ADD COLUMN job_id UUID REFERENCES jobs(id);
+```
+
+---
+
+## 5. セキュリティ要件の欠落
+
+### IR-029: WordPress API トークン暗号化の詳細不足
+
+**現在の記述:**
+```sql
+wp_api_token VARCHAR(500),  -- AES-256-GCMで暗号化して保存
+```
+
+**欠落項目:**
+- 暗号化キー管理方法（KMS vs 環境変数）
+- キーローテーション方針
+- トークン有効期限管理
+- トークン無効化方法
+
+**対応方針:**
+```
+暗号化キー: AWS KMS または Vercel Environment Variables
+キーローテーション: 90日ごと
+有効期限: WordPress Application Password は無期限
+無効化: ダッシュボードから手動、またはサイト削除時自動
+```
+
+---
+
+### IR-030: Tavily API キーの管理方法が未定義
+
+**欠落項目:**
+- Tavily API キーの保存位置
+- 暗号化方法
+- レート制限時の処理
+- API キー漏洩時の対応
+
+**対応方針:**
+```
+保存: Vercel Environment Variables（TAVILY_API_KEY）
+暗号化: Vercel側で自動暗号化
+レート制限: 429エラー時は指数バックオフでリトライ
+漏洩時: 即座にキー再発行、環境変数更新
+```
+
+---
+
+### IR-031: SSO トークン有効期限の未定義
+
+**現在:**
+```sql
+expires_at TIMESTAMP
+```
+
+**欠落:** デフォルト有効期限が未定義
+
+**対応方針:**
+```
+デフォルト有効期限: 5分
+トークン再利用: 禁止（used = true で無効化）
+IP制限: 発行時のIPと同一である必要あり（オプション）
+```
+
+---
+
+## 6. データ型の不一致
+
+### IR-032: `billing_history.amount` の型
+
+**現在（02_Backend_Database.md:165）:**
+```sql
+amount INTEGER,  -- 金額（最小単位: 円）
+```
+
+**問題:** Stripe はセント単位で金額を扱う
+
+**対応方針:**
+```sql
+amount_cents INTEGER,  -- Stripe の最小単位
+currency VARCHAR(3) DEFAULT 'jpy'
+```
+
+---
+
+### IR-033: `temperature` の有効範囲未定義
+
+**現在:**
+```sql
+temperature DECIMAL(3,2)
+```
+
+**問題:** 0.0〜2.0 の範囲制約がない
+
+**対応方針:**
+```sql
+temperature DECIMAL(3,2) CHECK (temperature >= 0 AND temperature <= 2)
+```
+
+---
+
+## 7. NULL許容の不整合
+
+### IR-034: `products.site_id` の NOT NULL 定義が曖昧
+
+**現在:**
+```sql
+site_id UUID REFERENCES sites(id),
+-- NOT NULL 制約なし
+```
+
+**問題:** プロダクト作成時に site_id が必須か不明
+
+**対応方針:**
+```sql
+site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE
+-- プロダクトは必ずサイトに紐付く
+```
+
+---
+
+### IR-035: `articles.wp_post_id` の NULL許容ルール
+
+**問題:** どの状態で NULL が許容されるか未定義
+
+**対応方針:**
+```
+draft, generating, review, failed: NULL 許容
+published: NOT NULL 必須（CHECK制約は実装困難なためアプリ層で制御）
+```
+
+---
+
+## 8. バリデーションルールの欠落
+
+### IR-036: VARCHAR カラムの形式制約不定義
+
+| カラム | 必要な制約 |
+|--------|----------|
+| email | RFC 5322 準拠 |
+| slug | `^[a-z0-9-]+$`（英小文字・数字・ハイフンのみ） |
+| url | URL形式（https://で始まる） |
+| meta_description | 最大160文字 |
+
+**対応方針:** API層でZodスキーマによるバリデーション
+
+---
+
+### IR-037: `cron_expression` のバリデーション不足
+
+**欠落:**
+- Cron式フォーマット検証ロジック
+- タイムゾーン指定方法
+- 無効な式のエラーメッセージ
+
+**対応方針:**
+```typescript
+import { parseExpression } from 'cron-parser';
+
+function validateCron(expression: string): boolean {
+  try {
+    parseExpression(expression, { tz: 'Asia/Tokyo' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+```
+
+---
+
+## 9. キャッシュ戦略の欠落
+
+### IR-038: Redis Object Cache の必須化タイミング不明
+
+| フェーズ | 記述 |
+|---------|------|
+| Phase 1 | オプション |
+| Phase 2 | 必須化 |
+
+**問題:** 必須化のトリガー（ユーザー数? レスポンス時間?）が未定義
+
+**対応方針:**
+```
+必須化条件:
+- アクティブユーザー50以上、または
+- WordPress管理画面の平均レスポンス > 3秒
+```
+
+---
+
+### IR-039: CDN キャッシュ戦略の未定義
+
+**欠落:**
+- キャッシュ対象
+- TTL設定
+- キャッシュパージ方法
+
+**対応方針:**
+```
+静的ファイル（JS/CSS/画像）: TTL 1年、immutable
+HTML: キャッシュなし（動的コンテンツ）
+API レスポンス: キャッシュなし
+パージ: Cloudflare API経由でデプロイ時に実行
+```
+
+---
+
+### IR-040: TanStack Query のキャッシュ設定未定義
+
+**欠落:** staleTime, cacheTime のデフォルト値
+
+**対応方針:**
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,  // 5分
+      cacheTime: 1000 * 60 * 30, // 30分
+      retry: 3,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+```
+
+---
+
+## 10. レート制限の未定義
+
+### IR-041: API レート制限の統一がない
+
+| コンポーネント | 制限 |
+|--------------|------|
+| SSO トークン生成 | 1分間に5回 |
+| スケジュール実行 | **未定義** |
+| Tavily API | **未定義** |
+| LLM API | **未定義** |
+
+**対応方針:**
+```
+グローバルAPI: 100リクエスト/分/ユーザー
+記事生成: 10リクエスト/時/ユーザー
+プロダクト分析: 5リクエスト/時/ユーザー
+外部API（Tavily等）: アプリ全体で60リクエスト/分
+```
+
+---
+
+### IR-042: Inngest ステップ上限との整合性
+
+**Inngest無料枠:** 25,000ステップ/月
+
+**未定義:**
+- 1記事生成あたりのステップ数
+- 1ユーザーあたりの月間生成可能記事数
+
+**対応方針:**
+```
+1記事生成: 約10ステップ（分析2 + 生成3 + 投稿2 + 通知3）
+25,000 / 10 = 2,500記事/月
+100ユーザー想定: 25記事/月/ユーザー
+```
+
+---
+
+## 11. ログ・監査証跡の欠落
+
+### IR-043: ユーザー操作ログテーブル欠落
+
+**欠落:** ダッシュボードでのアクション（記事削除、スケジュール変更など）のログ
+
+**対応方針:**
+```sql
+CREATE TABLE user_activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action VARCHAR(100) NOT NULL,  -- 'article.delete', 'schedule.update'
+  target_type VARCHAR(50),       -- 'article', 'schedule', 'site'
+  target_id UUID,
+  metadata JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+### IR-044: 削除ログの欠落
+
+**問題:** hard delete 前の記録がない
+
+**対応方針:**
+```sql
+CREATE TABLE deletion_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name VARCHAR(50) NOT NULL,
+  record_id UUID NOT NULL,
+  deleted_by UUID REFERENCES users(id),
+  reason VARCHAR(255),
+  backup_data JSONB,  -- 削除前のレコード全体
+  deleted_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+### IR-045: Stripe Webhook のログ記録不足
+
+**欠落:**
+- webhook_signature 検証のログ
+- 重複処理検知ログ（idempotency key）
+
+**対応方針:**
+```sql
+CREATE TABLE stripe_webhook_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id VARCHAR(100) UNIQUE NOT NULL,
+  event_type VARCHAR(100) NOT NULL,
+  payload JSONB,
+  signature_valid BOOLEAN,
+  processed BOOLEAN DEFAULT false,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## 12. フェーズ間の依存関係矛盾
+
+### IR-046: Phase 15 の前提条件の曖昧性
+
+**現在:**
+```
+前提フェーズ: Phase 10（GSC連携）
+```
+
+**問題:** 「十分なデータ蓄積」の定義がない
+
+**対応方針:**
+```
+Phase 15 開始条件:
+- GSC連携完了後 30日以上経過
+- 記事生成ログ 100件以上
+- GSCデータ取得成功率 95%以上
+```
+
+---
+
+## 優先度別修正項目サマリー
+
+### 🔴 高優先度（実装前に必須）
+
+| ID | 問題 | 対応期限 |
+|----|------|---------|
+| IR-018 | リトライ間隔統一 | Phase 1 開始前 |
+| IR-023 | articles.status 値追加 | Phase 2 開始前 |
+| IR-026 | VARCHAR サイズ統一 | DB初期化前 |
+| IR-029 | トークン暗号化詳細 | Phase 1 開始前 |
+| IR-030 | Tavily APIキー管理 | Phase 2 開始前 |
+| IR-034 | products.site_id NOT NULL | Phase 1 開始前 |
+| IR-041 | APIレート制限定義 | Phase 3 開始前 |
+
+### 🟡 中優先度（Phase 6 前に推奨）
+
+| ID | 問題 | 対応期限 |
+|----|------|---------|
+| IR-020〜022 | 命名規則統一 | Phase 2 開始前 |
+| IR-024〜025 | ENUM値統一 | Phase 2 開始前 |
+| IR-027〜028 | 外部キー追加 | Phase 2 開始前 |
+| IR-032〜033 | データ型修正 | Phase 5 開始前 |
+| IR-036〜037 | バリデーション追加 | Phase 3 開始前 |
+| IR-038〜040 | キャッシュ戦略定義 | Phase 2 開始前 |
+| IR-043〜045 | ログテーブル追加 | Phase 3 開始前 |
+
+---
+
+## 実装前チェックリスト（追加分）
+
+### DB スキーマ確定前
+
+- [ ] IR-023: articles.status に generating, review, failed 追加
+- [ ] IR-024: schedule_jobs.status を pending に統一
+- [ ] IR-025: sites.status に pending, provision_failed, deleted 追加
+- [ ] IR-026: 全 status カラムを VARCHAR(50) に統一
+- [ ] IR-027: products.site_id に ON DELETE SET NULL 追加
+- [ ] IR-032: billing_history.amount を amount_cents に変更
+- [ ] IR-033: temperature に CHECK 制約追加
+- [ ] IR-034: products.site_id に NOT NULL 追加
+- [ ] IR-043: user_activity_logs テーブル作成
+- [ ] IR-044: deletion_logs テーブル作成
+- [ ] IR-045: stripe_webhook_logs テーブル作成
+
+### 環境変数・設定確定前
+
+- [ ] IR-018: リトライ間隔を 1分→5分→15分 に統一
+- [ ] IR-019: タイムアウト値の関係を明確化
+- [ ] IR-029: 暗号化キー管理方法を決定
+- [ ] IR-030: Tavily APIキー管理方法を決定
+- [ ] IR-031: SSOトークン有効期限を5分に設定
+
+### API 実装前
+
+- [ ] IR-036: Zodスキーマによるバリデーション実装
+- [ ] IR-037: cron-parser によるCron式検証実装
+- [ ] IR-041: レート制限ミドルウェア実装
+
+---
+
 ## 関連ドキュメント
 
 - [00_Master_Architecture.md](./00_Master_Architecture.md) - 全体設計方針
 - [02_Backend_Database.md](./02_Backend_Database.md) - バックエンド・DB仕様
 - [04_AI_Pipeline.md](./04_AI_Pipeline.md) - AI処理パイプライン仕様
 - [05_Sequence_Diagrams.md](./05_Sequence_Diagrams.md) - システムシーケンス図
+- [CONCEPT_DECISIONS.md](../CONCEPT_DECISIONS.md) - 全決定事項
