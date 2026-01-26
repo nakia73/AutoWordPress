@@ -362,7 +362,7 @@ MVPではWordPress管理画面で記事編集を行う想定ですが、ダッ�
 初期獲得チャネルがX/Threadsのみに依存しており、SNSのリーチには限界があります。また、自社でSEOブログを運用してArgo Noteの効果を実証する「ドッグフーディング」の計画もありません。
 
 **質問:**
-X/Threads以外で注力する獲得チャネルはありますか？Product Hunt、Indie Hackers、ココナラ、自社SEOブログ（Argo Noteで運用）、などの選択肢がありますが、どれを選びますか？
+X/Threads以外で注力する獲得チャネルはありますか？Product Hunt、Indie Hackers、自社SEOブログ（Argo Noteで運用）、などの選択肢がありますが、どれを選びますか？
 
 ---
 
