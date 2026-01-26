@@ -91,7 +91,7 @@ redirect(portalSession.url);
 - `users` - Stripe顧客ID、サブスクリプション状態を追加
 - `billing_history` - 課金履歴
 
-**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#課金決済phase-4) を参照
+**詳細スキーマ:** [バックエンド・DB仕様書](../architecture/02_Backend_Database.md#課金決済phase-5) を参照
 
 ---
 

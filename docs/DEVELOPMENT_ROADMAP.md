@@ -22,12 +22,13 @@ docs/
 │   ├── 03_Infrastructure_Ops.md    # インフラ・運用仕様
 │   ├── 04_AI_Pipeline.md           # AI処理パイプライン仕様
 │   ├── 05_Sequence_Diagrams.md     # システムシーケンス図
-│   └── 06_Multisite_feasibility.md # Multisite採用検討
+│   ├── 06_Multisite_feasibility.md # Multisite採用検討
+│   └── 07_WordPress_Multisite_Guide.md # Multisite実装ガイド
 └── phases/                   # 開発フェーズ詳細（WHAT & WHEN）
     ├── Phase0_Mockup.md      # モックアップ・集客
     ├── Phase1_Infrastructure.md  # インフラ基盤構築
     ├── ...
-    └── Phase12_ModelSelection.md
+    └── Phase14_ReferralProgram.md
 ```
 
 **ドキュメントの役割:**
@@ -42,7 +43,8 @@ docs/
 
 | Phase | 名称 | テーマ | 概要 | Week |
 |-------|------|--------|------|------|
-| [Phase 0](./phases/Phase0_Mockup.md) | Mockup | Visualization & Traction | LP・SNSデモでウェイトリスト獲得 | Week 1 |
+| [Phase 0](./phases/Phase0_Mockup.md) | Mockup | Visualization | SNSデモ動画でコンセプト反応検証 | Week 1前半 |
+| [Phase 0.5](./phases/Phase0.5_MVPBranding.md) | MVP Branding | Identity | ロゴ・アイコン作成、正式LP公開 | Week 1前半 |
 | [Phase 1](./phases/Phase1_Infrastructure.md) | Infrastructure + Auth | Foundation | VPS・SSL・Multisite・**認証基盤（Supabase Auth）** | Week 1 |
 | [Phase 2](./phases/Phase2_CoreAI.md) | Core AI | Intelligent Engine | プロダクト分析・記事生成・WordPress投稿 | Week 2 |
 | [Phase 3](./phases/Phase3_UserInterface.md) | User Interface | Onboarding & Control | オンボーディング・ダッシュボード | Week 3 |
@@ -50,7 +52,7 @@ docs/
 | [Phase 5](./phases/Phase5_Monetization.md) | Monetization | Sustainability | Stripe決済・サブスクリプション管理 | Week 4 |
 | [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | 10社限定ベータリリース・フィードバック収集 | Week 4 |
 
-### 成長フェーズ（Phase 7-12）【ベータフィードバック後】
+### 成長フェーズ（Phase 7-14）【ベータフィードバック後】
 
 | Phase | 名称 | テーマ | 概要 |
 |-------|------|--------|------|
@@ -60,13 +62,15 @@ docs/
 | [Phase 10](./phases/Phase10_GSCIntegration.md) | GSC Integration | Optimization | Google Search Console連携・AI自律改善 |
 | [Phase 11](./phases/Phase11_HeadlessEvaluation.md) | Headless Evaluation | Evolution | Headless WordPress化の妥当性評価 |
 | [Phase 12](./phases/Phase12_ModelSelection.md) | Model Selection | Flexibility | ユーザーによるLLMモデル選択機能 |
+| [Phase 13](./phases/Phase13_BrandIdentity.md) | Brand Evolution | Refinement | ブランド洗練・ガイドライン策定・グッズ連携 |
+| [Phase 14](./phases/Phase14_ReferralProgram.md) | Referral Program | Growth | リファラルプログラム実装 |
 
 ---
 
 ## 開発進行の原則
 
 ### 1. MVP First
-- Phase 0-5 を最優先で完了
+- Phase 0〜6 を最優先で完了
 - 「動く最小限」を早期にユーザーへ提供
 
 ### 2. フィードバック駆動
@@ -123,11 +127,13 @@ docs/
 - [04. AIパイプライン](./architecture/04_AI_Pipeline.md) - 記事生成フロー、LLM戦略
 - [05. シーケンス図](./architecture/05_Sequence_Diagrams.md) - 処理フロー詳細
 - [06. Multisite検討](./architecture/06_Multisite_feasibility.md) - アーキテクチャ決定根拠
+- [07. Multisiteガイド](./architecture/07_WordPress_Multisite_Guide.md) - 実装詳細・セキュリティ設計
 
 ### 開発フェーズ詳細（Phases）
 
 **MVP（1ヶ月）:**
-- [Phase 0: Mockup](./phases/Phase0_Mockup.md) - マーケティング・需要検証
+- [Phase 0: Mockup](./phases/Phase0_Mockup.md) - SNSデモ動画・コンセプト検証
+- [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md) - ロゴ・アイコン・正式LP
 - [Phase 1: Infrastructure + Auth](./phases/Phase1_Infrastructure.md) - インフラ基盤・認証
 - [Phase 2: Core AI](./phases/Phase2_CoreAI.md) - AIコア機能
 - [Phase 3: User Interface](./phases/Phase3_UserInterface.md) - ユーザーインターフェース
@@ -142,6 +148,8 @@ docs/
 - [Phase 10: GSC Integration](./phases/Phase10_GSCIntegration.md) - Search Console連携
 - [Phase 11: Headless Evaluation](./phases/Phase11_HeadlessEvaluation.md) - Headless化評価
 - [Phase 12: Model Selection](./phases/Phase12_ModelSelection.md) - LLMモデル選択機能
+- [Phase 13: Brand Evolution](./phases/Phase13_BrandIdentity.md) - ブランド洗練・ガイドライン策定
+- [Phase 14: Referral Program](./phases/Phase14_ReferralProgram.md) - リファラルプログラム
 
 ### コンセプト・決定事項
 - [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) - 全技術選定・ビジネス決定の記録

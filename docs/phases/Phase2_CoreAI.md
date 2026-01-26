@@ -22,7 +22,7 @@
 ### Step 1: プロダクト分析エンジン (Firecrawl + LLM)
 
 - **Firecrawl API**（プライマリ）/ **Jina Reader**（フォールバック）を使用して、ユーザーが入力したURLからサイト全体の文字情報をスクレイピング。
-- 取得した情報を **Claude 3.5 Sonnet**（メイン）/ **GPT-4o-mini**（フォールバック）に渡し、以下の属性を抽出。
+- 取得した情報を **Gemini 3.0 Pro**（ソフトコーディング）に渡し、以下の属性を抽出。
   - **ターゲット像:** 誰がそのプロダクトを使うべきか（ペルソナ）。
   - **キーワード:** どのような検索意図でプロダクトが発見されるべきか。
   - **記事クラスター案:** サイト全体のSEO評価を上げるための関連トピック群。
@@ -88,8 +88,7 @@ const response = await fetch(`https://${siteSlug}.argonote.app/wp-json/wp/v2/pos
 |---------------|------|
 | Web Scraping | **Firecrawl API** (primary) + Jina Reader (fallback) |
 | Semantic Search | Tavily API |
-| LLM (Main) | **Claude 3.5 Sonnet** (via LiteLLM) |
-| LLM (Fallback) | **GPT-4o-mini** |
+| LLM | **Gemini 3.0 Pro** (via LiteLLM) ※ソフトコーディング |
 | Worker/Queue | **Inngest** (長時間処理・自動リトライ対応) |
 | Database | **Supabase (PostgreSQL)** |
 

@@ -74,7 +74,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255),
   name VARCHAR(255),
-  -- Stripe連携 (Phase 4)
+  -- Stripe連携 (Phase 5)
   stripe_customer_id VARCHAR(255),
   subscription_status VARCHAR(50) DEFAULT 'trial',  -- trial, active, past_due, canceled
   subscription_id VARCHAR(255),
@@ -149,7 +149,7 @@ CREATE TABLE jobs (
 );
 ```
 
-### 課金・決済（Phase 4）
+### 課金・決済（Phase 5）
 
 ```sql
 -- 課金履歴

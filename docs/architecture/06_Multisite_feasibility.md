@@ -35,7 +35,7 @@ graph TD
     Cloudflare -->|Reverse Proxy| Nginx[Nginx Reverse Proxy]
     Nginx -->|FastCGI| WP[WordPress Multisite Core]
     WP --> Redis[Redis Object Cache]
-    WP --> DB[PostgreSQL / MySQL]
+    WP --> DB[MariaDB]
 
     subgraph "Logical Sites"
         SiteA[Site A (Client A)]

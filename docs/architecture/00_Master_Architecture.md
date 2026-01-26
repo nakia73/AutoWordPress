@@ -123,6 +123,8 @@ graph TD
 
 | フェーズ | 関連するアーキテクチャ要素 | Week |
 |---------|--------------------------|------|
+| [Phase 0: Mockup](../phases/Phase0_Mockup.md) | SNSデモ動画・コンセプト検証 | 1前半 |
+| [Phase 0.5: MVP Branding](../phases/Phase0.5_MVPBranding.md) | ロゴ・アイコン・正式LP | 1前半 |
 | [Phase 1: Infrastructure + Auth](../phases/Phase1_Infrastructure.md) | VPS、Multisite、Supabase Auth | 1 |
 | [Phase 2: Core AI](../phases/Phase2_CoreAI.md) | AIパイプライン、Inngest | 2 |
 | [Phase 3: User Interface](../phases/Phase3_UserInterface.md) | Next.js Dashboard | 3 |
