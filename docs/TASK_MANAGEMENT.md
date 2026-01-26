@@ -48,6 +48,7 @@
 | T007 | 不要ドキュメント削除・整理 | 2026-01-26 | ANALYSIS_REPORT.md, ISSUE_RESOLUTION_QUESTIONS.md 削除 |
 | T008 | README.md・TASK_MANAGEMENT.md作成 | 2026-01-26 | ドキュメント構成概要とタスク管理の整備 |
 | T009 | CONCEPT_DECISIONS設計思想・ビジョン反映チェック | 2026-01-26 | E0, H1, H17追加、v2.7更新 |
+| T010 | 全ドキュメントからDockerキーワード完全除去 | 2026-01-26 | 4ファイル修正（誤採用防止のため） |
 
 ---
 
