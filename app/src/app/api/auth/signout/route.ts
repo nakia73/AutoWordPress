@@ -1,11 +1,11 @@
 // Argo Note - Sign Out API
 
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST() {
   try {
-    const supabase = await createServerClient();
+    const supabase = await createServerSupabaseClient();
     await supabase.auth.signOut();
 
     return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'));
