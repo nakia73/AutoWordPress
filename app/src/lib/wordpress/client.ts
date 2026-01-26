@@ -5,7 +5,6 @@ import type {
   WPPostRequest,
   WPPostResponse,
   WPPostStatus,
-  WP_ERROR_HANDLERS,
 } from '@/types';
 
 type WPClientOptions = {
