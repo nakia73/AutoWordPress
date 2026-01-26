@@ -7,16 +7,17 @@ import { inngest } from '@/lib/inngest/client';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { articleId: string } }
+  { params }: { params: Promise<{ articleId: string }> }
 ) {
   try {
     const user = await requireAuth();
+    const { articleId } = await params;
     const { action } = await request.json();
 
     // Verify article belongs to user
     const article = await prisma.article.findFirst({
       where: {
-        id: params.articleId,
+        id: articleId,
         cluster: {
           product: {
             userId: user.id,

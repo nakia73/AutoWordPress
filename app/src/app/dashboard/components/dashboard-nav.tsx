@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 type User = {
   id: string;
-  email: string;
+  email?: string;
   name?: string;
   avatarUrl?: string;
 };
@@ -69,11 +69,11 @@ export function DashboardNav({ user }: { user: User }) {
                 />
               ) : (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  {(user.name || user.email).charAt(0).toUpperCase()}
+                  {(user.name || user.email || 'U').charAt(0).toUpperCase()}
                 </div>
               )}
               <span className="hidden text-sm text-gray-700 sm:block">
-                {user.name || user.email}
+                {user.name || user.email || 'User'}
               </span>
             </div>
             <form action="/api/auth/signout" method="post">

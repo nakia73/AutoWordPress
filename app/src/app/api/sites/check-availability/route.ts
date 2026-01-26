@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { available: false, reason: 'invalid', errors: error.errors },
+        { available: false, reason: 'invalid', errors: error.issues },
         { status: 400 }
       );
     }

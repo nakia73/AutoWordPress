@@ -12,13 +12,14 @@ import { formatDate } from '@/lib/utils';
 export default async function SiteDetailPage({
   params,
 }: {
-  params: { siteId: string };
+  params: Promise<{ siteId: string }>;
 }) {
   const user = await requireAuth();
+  const { siteId } = await params;
 
   const site = await prisma.site.findFirst({
     where: {
-      id: params.siteId,
+      id: siteId,
       userId: user.id,
     },
     include: {

@@ -37,7 +37,7 @@ export const analyzeProduct = inngest.createFunction(
 
     const analyzeOptions = {
       productId,
-      productName: product.name,
+      productName: product.name || 'Unnamed Product',
       productDescription: product.description || '',
       productUrl: url,
       userAnswers: answers,

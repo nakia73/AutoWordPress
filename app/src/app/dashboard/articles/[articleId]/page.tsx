@@ -22,13 +22,14 @@ const statusVariantMap: Record<string, 'default' | 'secondary' | 'success' | 'wa
 export default async function ArticleDetailPage({
   params,
 }: {
-  params: { articleId: string };
+  params: Promise<{ articleId: string }>;
 }) {
   const user = await requireAuth();
+  const { articleId } = await params;
 
   const article = await prisma.article.findFirst({
     where: {
-      id: params.articleId,
+      id: articleId,
       cluster: {
         product: {
           userId: user.id,

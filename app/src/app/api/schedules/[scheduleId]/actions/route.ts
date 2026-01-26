@@ -7,16 +7,17 @@ import { inngest } from '@/lib/inngest/client';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { scheduleId: string } }
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
     const user = await requireAuth();
+    const { scheduleId } = await params;
     const { action } = await request.json();
 
     // Verify schedule belongs to user
     const schedule = await prisma.schedule.findFirst({
       where: {
-        id: params.scheduleId,
+        id: scheduleId,
         userId: user.id,
       },
     });

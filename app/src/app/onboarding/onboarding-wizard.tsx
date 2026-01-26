@@ -117,9 +117,7 @@ export default function OnboardingWizard({ userId }: OnboardingWizardProps) {
               className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 step === 'subdomain'
                   ? 'bg-blue-600 text-white'
-                  : step !== 'subdomain'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200'
+                  : 'bg-green-500 text-white'
               }`}
             >
               {step !== 'subdomain' ? '✓' : '1'}

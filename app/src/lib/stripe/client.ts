@@ -4,7 +4,7 @@
 import Stripe from 'stripe';
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27.acacia',
+  apiVersion: '2025-12-15.clover',
   typescript: true,
 });
 
@@ -73,9 +73,10 @@ export async function createPortalSession({
 // Helper to get subscription status
 export async function getSubscriptionStatus(subscriptionId: string) {
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const currentPeriodEnd = subscription.items.data[0]?.current_period_end;
   return {
     status: subscription.status,
-    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
   };
 }

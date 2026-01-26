@@ -57,10 +57,16 @@ export const executeSchedule = inngest.createFunction(
       });
     });
 
-    // Get draft articles to generate
+    // Get draft articles to generate (preserve productId from parent cluster)
     const draftArticles = schedule.site?.products
-      .flatMap((p) => p.articleClusters)
-      .flatMap((c) => c.articles)
+      .flatMap((p) => p.articleClusters.map((c) => ({
+        ...c,
+        productId: p.id,
+      })))
+      .flatMap((c) => c.articles.map((a) => ({
+        ...a,
+        productId: c.productId,
+      })))
       .slice(0, schedule.articlesPerRun) || [];
 
     if (draftArticles.length === 0) {
@@ -82,7 +88,7 @@ export const executeSchedule = inngest.createFunction(
     }
 
     // Generate articles
-    const generationResults = [];
+    const generationResults: Array<{ articleId: string; status: string; error?: string }> = [];
 
     for (const article of draftArticles) {
       const result = await step.run(`generate-article-${article.id}`, async () => {
@@ -92,7 +98,7 @@ export const executeSchedule = inngest.createFunction(
             name: 'article/generate',
             data: {
               articleId: article.id,
-              productId: article.cluster?.productId || '',
+              productId: article.productId,
               targetKeyword: article.targetKeyword || '',
               clusterId: article.clusterId,
             },

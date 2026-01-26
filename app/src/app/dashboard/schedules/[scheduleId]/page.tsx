@@ -12,13 +12,14 @@ import { ScheduleActions } from './schedule-actions';
 export default async function ScheduleDetailPage({
   params,
 }: {
-  params: { scheduleId: string };
+  params: Promise<{ scheduleId: string }>;
 }) {
   const user = await requireAuth();
+  const { scheduleId } = await params;
 
   const schedule = await prisma.schedule.findFirst({
     where: {
-      id: params.scheduleId,
+      id: scheduleId,
       userId: user.id,
     },
     include: {

@@ -2,7 +2,42 @@
 ## Mockup → App リッチUIデザイン移植計画
 
 **作成日**: 2026-01-27
-**ステータス**: 計画中
+**ステータス**: ✅ Iteration 1 完了
+**完了日**: 2026-01-27
+
+## 実装完了サマリー
+
+### Iteration 1で完了した項目
+
+| フェーズ | 内容 | 状態 |
+|---------|------|------|
+| 6.1.1.1 | 依存関係追加（framer-motion, @radix-ui/*, tw-animate-css） | ✅ |
+| 6.1.1.2 | globals.css更新（ゴールドテーマ、デザイントークン） | ✅ |
+| 6.1.2 | UIコンポーネント移植（Button, Card, Badge, Input, Dialog, Progress, Skeleton, Tabs, Label, Sheet） | ✅ |
+| 6.1.3 | レイアウト刷新（Sidebar, DashboardLayout） | ✅ |
+| 6.1.4 | TypeScriptコンパイル確認 | ✅ |
+
+### 追加されたファイル
+
+- `src/components/ui/progress.tsx` - プログレスバー（Framer Motion）
+- `src/components/ui/skeleton.tsx` - ローディングスケルトン
+- `src/components/ui/tabs.tsx` - タブコンポーネント
+- `src/components/ui/dialog.tsx` - モーダルダイアログ
+- `src/components/ui/sheet.tsx` - サイドシート/ドロワー
+- `src/components/ui/label.tsx` - フォームラベル
+- `src/components/dashboard/sidebar.tsx` - 新サイドバーナビゲーション
+
+### 更新されたファイル
+
+- `package.json` - 新依存関係追加
+- `src/app/globals.css` - ゴールドテーマ、アニメーション、エフェクト
+- `src/components/ui/button.tsx` - shadcn/ui準拠、asChild対応
+- `src/components/ui/card.tsx` - CardAction追加、ホバーエフェクト
+- `src/components/ui/badge.tsx` - asChild対応、新バリアント
+- `src/components/ui/input.tsx` - 新デザイントークン適用
+- `src/app/dashboard/layout.tsx` - サイドバーレイアウト
+
+---
 
 ---
 

@@ -57,7 +57,7 @@ export const generateArticle = inngest.createFunction(
 
       return articleGenerator.generate({
         targetKeyword: targetKeyword || article.targetKeyword || '',
-        productName: product.name,
+        productName: product.name || 'Unnamed Product',
         productDescription: product.description || '',
         articleType: (article.articleType as ArticleType) || 'article',
         language,

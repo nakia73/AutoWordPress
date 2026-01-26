@@ -115,6 +115,10 @@ export class WordPressClient {
   ): Promise<WPMediaUploadResponse> {
     const url = `${this.baseUrl}/wp-json/wp/v2/media`;
 
+    // Convert Buffer to ArrayBuffer for fetch compatibility
+    const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -122,7 +126,7 @@ export class WordPressClient {
         'Content-Type': mimeType,
         Authorization: this.authHeader,
       },
-      body: file,
+      body: blob,
     });
 
     if (!response.ok) {

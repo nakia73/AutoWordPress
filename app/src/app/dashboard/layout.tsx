@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireAuth } from '@/lib/supabase/auth';
-import { DashboardNav } from './components/dashboard-nav';
+import { Sidebar } from '@/components/dashboard/sidebar';
 
 export default async function DashboardLayout({
   children,
@@ -14,10 +14,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNav user={user} />
-      <main className="py-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background">
+      <Sidebar user={user} />
+      {/* Main content area with sidebar offset */}
+      <main className="lg:pl-[280px] min-h-screen">
+        <div className="p-6 lg:p-8">
           {children}
         </div>
       </main>
