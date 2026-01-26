@@ -46,6 +46,8 @@
 | T005 | Phase 14（Referral Program）追加 | 2026-01-26 | Phase14_ReferralProgram.md |
 | T006 | 全ドキュメント整合性チェック・修正 | 2026-01-26 | 13ファイル更新 |
 | T007 | 不要ドキュメント削除・整理 | 2026-01-26 | ANALYSIS_REPORT.md, ISSUE_RESOLUTION_QUESTIONS.md 削除 |
+| T008 | README.md・TASK_MANAGEMENT.md作成 | 2026-01-26 | ドキュメント構成概要とタスク管理の整備 |
+| T009 | CONCEPT_DECISIONS設計思想・ビジョン反映チェック | 2026-01-26 | E0, H1, H17追加、v2.7更新 |
 
 ---
 
