@@ -752,17 +752,24 @@ Step 6: 本開発開始（Phase 1〜）
 
 #### E0. インフラ全体構成
 
-**決定事項: WordPress Multisite + Cloudflare統合**
+**決定事項: WordPress Multisite + Cloudflare統合（Dockerは不使用）**
 
 | コンポーネント | 技術 | 理由 |
 |---------------|------|------|
 | WordPress | Multisite on DigitalOcean VPS | 複数サイトを効率的に管理 |
-| コンテナ | Docker Compose | 環境の再現性・ポータビリティ |
+| Webサーバー | Nginx + PHP-FPM | 高性能・低リソース |
+| DB | MariaDB（同一VPS） | WordPress標準 |
 | CDN | Cloudflare | 高速化・DDoS防御 |
 | SSL | Cloudflare SSL | 全サブドメインでHTTPS |
 | WAF | Cloudflare WAF | セキュリティ強化 |
 | DNS | Cloudflare DNS | ワイルドカードDNS対応 |
 | ストレージ | Cloudflare R2 | メディアファイル配信（S3互換） |
+| キャッシュ | Redis Object Cache | パフォーマンス向上（オプション） |
+
+**Dockerを採用しない理由:**
+- サイト作成: Multisite 0.1秒 vs Docker 30-60秒
+- リソース効率: 共有メモリで効率的 vs コンテナ毎に50MB消費
+- 保守: 1回の更新で全サイトに適用 vs N回実行
 
 **詳細:** [インフラ仕様](./architecture/03_Infrastructure_Ops.md) | [WordPress Multisite実装ガイド](./architecture/07_WordPress_Multisite_Guide.md)
 
@@ -1460,6 +1467,7 @@ Phase 6:   MVP Launch
 | 2026-01-26 | 2.5 | **コアコンセプト完成:** A3（ワンラインピッチ）、A5（原体験）、A6（5年後のビジョン）を追加。B12（成功の定義）、B13（期待値コントロール）を追加。「AI時代のデファクトスタンダード」「クオリティ重視」の思想を明文化 |
 | 2026-01-26 | 2.6 | **グローバル・フリーミアム方針追加:** B14（地域：グローバル、英語デフォルト）、B15（クオリティ戦略MVP vs 将来）、D7（フリーミアムモデル）を追加。制限方式は検討課題として残す |
 | 2026-01-26 | 2.7 | **設計完成度向上:** H1にPhase 0.5追加、H17（ブランディング戦略：二段階アプローチ）追加、E0（インフラ全体構成）追加。ステータスを「コア設計完了」に変更 |
+| 2026-01-26 | 2.7.1 | **E0修正:** Docker Composeの誤記載を削除。Nginx+PHP-FPM構成を明記、Dockerを採用しない理由を追加 |
 
 ---
 
