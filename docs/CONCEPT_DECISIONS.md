@@ -1,6 +1,6 @@
 # Argo Note - コンセプト確定シート
 
-**Version:** 2.7
+**Version:** 2.8
 **作成日:** 2026年1月25日
 **最終更新:** 2026年1月26日
 **ステータス:** コア設計完了
@@ -888,12 +888,22 @@ Step 6: 本開発開始（Phase 1〜）
 
 #### E9. プロンプト管理（Q15回答）
 
-**決定事項: YAML + Git（MVP）→ Langfuse（Phase 2）**
+**決定事項: YAML + Git（MVP）→ Langfuse（Phase 2）→ Prompt Intelligence（Phase 15）**
 
 | フェーズ | 方式 |
 |---------|------|
 | MVP | `config/prompts/*.yaml` + Git |
 | Phase 2 | Langfuse（A/Bテスト対応） |
+| Phase 15 | Prompt Intelligence（効果分析・コミュニティ機能） |
+
+**Phase 15拡張:**
+- プロンプトトレーサビリティ（どの記事にどのプロンプトを使用したか追跡）
+- パフォーマンス相関分析（GSCデータとの紐付け）
+- プロンプト効果スコア（PES）による最適化
+- A/Bテスト機能
+- コミュニティインテリジェンス（匿名集計による知見共有）
+
+詳細: [Phase 15: Prompt Intelligence](./phases/Phase15_PromptIntelligence.md)
 
 ---
 
@@ -919,6 +929,66 @@ Step 6: 本開発開始（Phase 1〜）
 | エグレス料金 | 無料 |
 | WordPress連携 | WP Offload Media |
 | 無料枠 | 10GB/月 |
+
+---
+
+#### E12. SEO戦略駆動型コンテンツ生成フロー
+
+**決定事項: 7フェーズSEO戦略パイプラインを採用**
+
+単純な「URL → クロール → 記事生成」ではなく、SEO戦略に基づいた体系的なコンテンツ生成を行う。
+
+**フロー概要:**
+
+```
+Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
+[プロダクト] [購買思考] [KW調査] [競合分析] [クラスター] [記事生成] [最適化]
+```
+
+| Phase | 名称 | 処理内容 |
+|-------|------|----------|
+| A | プロダクト理解 | URL/対話/競合調査から情報収集 |
+| B | 購買思考推論 | LLMで購買ファネルに沿った検索キーワード仮説生成 |
+| C | キーワード調査 | API（Keywords Everywhere/DataForSEO）で検証・拡張 |
+| D | 競合/SERP分析 | Tavily + LLMで上位記事分析、差別化設計 |
+| E | 記事クラスター設計 | ピラー・クラスター構造、内部リンク戦略 |
+| F | 個別記事生成 | Planner → Writer → Editor → Illustrator |
+| G | パフォーマンス最適化 | GSCデータ連携、リライト提案（Phase 10連携） |
+
+**キーワード調査API選定:**
+
+| API | 月額目安 | 採用優先度 |
+|-----|---------|-----------|
+| Keywords Everywhere | $10〜 | MVP候補 |
+| DataForSEO | $50〜 | 成長期候補 |
+| Semrush API | $100〜 | 将来検討 |
+
+**詳細:** [AIパイプライン](./architecture/04_AI_Pipeline.md)
+
+---
+
+#### E13. Prompt Intelligence（Phase 15）
+
+**決定事項: プロンプトの効果測定・最適化システムを構築**
+
+**目的:**
+- どのプロンプトがSEO効果を発揮したかを追跡・分析
+- ユーザーが最適なプロンプトを選択できる仕組み
+- コミュニティ全体の知見を共有
+
+**主要機能:**
+
+| 機能 | 説明 |
+|------|------|
+| トレーサビリティ | 記事ごとに使用プロンプト・LLM設定を記録 |
+| パフォーマンス相関 | GSCデータと紐付け、効果測定 |
+| PESスコア | Prompt Effectiveness Score算出 |
+| A/Bテスト | プロンプトの効果比較 |
+| コミュニティ統計 | 匿名集計による効果ランキング共有 |
+
+**前提フェーズ:** Phase 10（GSC連携）
+
+**詳細:** [Phase 15: Prompt Intelligence](./phases/Phase15_PromptIntelligence.md)
 
 ---
 
@@ -1463,6 +1533,7 @@ Phase 6:   MVP Launch
 | 2026-01-26 | 2.6 | **グローバル・フリーミアム方針追加:** B14（地域：グローバル、英語デフォルト）、B15（クオリティ戦略MVP vs 将来）、D7（フリーミアムモデル）を追加。制限方式は検討課題として残す |
 | 2026-01-26 | 2.7 | **設計完成度向上:** H1にPhase 0.5追加、H17（ブランディング戦略：二段階アプローチ）追加、E0（インフラ全体構成）追加。ステータスを「コア設計完了」に変更 |
 | 2026-01-26 | 2.7.1 | **E0修正:** 誤記載を削除、Nginx+PHP-FPM構成を明記 |
+| 2026-01-26 | 2.8 | **SEO戦略・Prompt Intelligence追加:** E12（7フェーズSEO戦略パイプライン）、E13（Prompt Intelligence）追加。E9にPhase 15拡張を追記 |
 
 ---
 

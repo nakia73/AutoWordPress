@@ -75,11 +75,25 @@
 
 記事生成、分析、画像生成を行う非同期処理フローです。
 
+**SEO戦略駆動型7フェーズパイプライン:**
+
+| Phase | 処理 | ツール |
+|-------|------|--------|
+| A | プロダクト理解 | Firecrawl / Jina Reader / LLM対話 |
+| B | 購買思考推論 | LLM |
+| C | キーワード調査 | Keywords Everywhere / DataForSEO |
+| D | 競合/SERP分析 | Tavily + LLM |
+| E | 記事クラスター設計 | LLM |
+| F | 個別記事生成 | Gemini 3.0 Pro |
+| G | パフォーマンス最適化 | GSC連携（Phase 10） |
+
 - **Text Gen:** **Gemini 3.0 Pro**（LiteLLMプロキシ経由、ソフトコーディング）
 - **Search/競合調査:** **Tavily API** → LLM解釈
+- **Keyword Research:** Keywords Everywhere / DataForSEO（Phase C）
 - **Scraping:** **Firecrawl + Jina Reader**（フォールバック）
 - **Image (MVP):** Unsplash/Pexels → **DALL-E 3**（Phase 7）
 - **Scheduler:** **Inngest**（スケジュール自動化）
+- **Prompt Intelligence:** Phase 15で効果分析・A/Bテスト
 
 **重要:** LLMモデルはソフトコーディング（環境変数で切り替え可能）とする。ハードコード禁止。
 
@@ -131,3 +145,7 @@ graph TD
 | [Phase 4: Automation](../phases/Phase4_Automation.md) | スケジュール自動化 | 3 |
 | [Phase 5: Monetization](../phases/Phase5_Monetization.md) | Stripe連携 | 4 |
 | [Phase 6: MVP Launch](../phases/Phase6_MVPLaunch.md) | Beta運用開始 | 4 |
+
+**成長フェーズ（Phase 7-15）:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) を参照
+- Phase 10: GSC Integration（パフォーマンスデータ取得）
+- **Phase 15: Prompt Intelligence**（プロンプト効果分析・A/Bテスト）

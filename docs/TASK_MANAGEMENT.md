@@ -49,6 +49,9 @@
 | T008 | README.md・TASK_MANAGEMENT.md作成 | 2026-01-26 | ドキュメント構成概要とタスク管理の整備 |
 | T009 | CONCEPT_DECISIONS設計思想・ビジョン反映チェック | 2026-01-26 | E0, H1, H17追加、v2.7更新 |
 | T010 | 全ドキュメントからDockerキーワード完全除去 | 2026-01-26 | 4ファイル修正（誤採用防止のため） |
+| T011 | SEO戦略駆動型フロー（Phase A-G）追加 | 2026-01-26 | 04_AI_Pipeline.md大幅更新 |
+| T012 | Phase 15（Prompt Intelligence）作成 | 2026-01-26 | Phase15_PromptIntelligence.md新規作成 |
+| T013 | 全ドキュメント整合性確認・Phase 15反映 | 2026-01-26 | 8ファイル更新（ROADMAP, CONCEPT_DECISIONS, README等） |
 
 ---
 

@@ -28,7 +28,7 @@ docs/
     ├── Phase0_Mockup.md      # モックアップ・集客
     ├── Phase1_Infrastructure.md  # インフラ基盤構築
     ├── ...
-    └── Phase14_ReferralProgram.md
+    └── Phase15_PromptIntelligence.md
 ```
 
 **ドキュメントの役割:**
@@ -52,7 +52,7 @@ docs/
 | [Phase 5](./phases/Phase5_Monetization.md) | Monetization | Sustainability | Stripe決済・サブスクリプション管理 | Week 4 |
 | [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | 10社限定ベータリリース・フィードバック収集 | Week 4 |
 
-### 成長フェーズ（Phase 7-14）【ベータフィードバック後】
+### 成長フェーズ（Phase 7-15）【ベータフィードバック後】
 
 | Phase | 名称 | テーマ | 概要 |
 |-------|------|--------|------|
@@ -64,6 +64,7 @@ docs/
 | [Phase 12](./phases/Phase12_ModelSelection.md) | Model Selection | Flexibility | ユーザーによるLLMモデル選択機能 |
 | [Phase 13](./phases/Phase13_BrandIdentity.md) | Brand Evolution | Refinement | ブランド洗練・ガイドライン策定・グッズ連携 |
 | [Phase 14](./phases/Phase14_ReferralProgram.md) | Referral Program | Growth | リファラルプログラム実装 |
+| [Phase 15](./phases/Phase15_PromptIntelligence.md) | Prompt Intelligence | Analytics | プロンプトトレーサビリティ・効果分析・A/Bテスト |
 
 ---
 
@@ -150,6 +151,7 @@ docs/
 - [Phase 12: Model Selection](./phases/Phase12_ModelSelection.md) - LLMモデル選択機能
 - [Phase 13: Brand Evolution](./phases/Phase13_BrandIdentity.md) - ブランド洗練・ガイドライン策定
 - [Phase 14: Referral Program](./phases/Phase14_ReferralProgram.md) - リファラルプログラム
+- [Phase 15: Prompt Intelligence](./phases/Phase15_PromptIntelligence.md) - プロンプト効果分析・A/Bテスト
 
 ### コンセプト・決定事項
 - [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) - 全技術選定・ビジネス決定の記録

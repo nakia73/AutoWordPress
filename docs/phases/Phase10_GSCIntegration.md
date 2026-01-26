@@ -1,7 +1,7 @@
 # Phase 10: GSC Integration（Google Search Console連携・自律改善）
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [Phase 15: Prompt Intelligence](./Phase15_PromptIntelligence.md)
 > **前のフェーズ:** [← Phase 9: SSO](./Phase9_SSO.md) | **次のフェーズ:** [Phase 11: Headless Evaluation →](./Phase11_HeadlessEvaluation.md)
 
 **テーマ:** Autonomous Optimization
@@ -64,3 +64,26 @@
 ## 4. 実装優先度
 
 十分なトラフィックデータ蓄積後に意味を持つ機能。上位プランの目玉機能として検討。
+
+---
+
+## 5. Phase 15（Prompt Intelligence）との連携
+
+本フェーズで取得するGSCデータは、**Phase 15: Prompt Intelligence** の基盤データとなります。
+
+**データ連携フロー:**
+
+```
+GSC API → article_performance_metrics → Prompt Intelligence分析
+```
+
+**連携内容:**
+
+| GSCデータ | Phase 15での活用 |
+|-----------|-----------------|
+| インプレッション | プロンプト効果スコア（PES）算出 |
+| クリック | 成功パターン特定 |
+| CTR | タイトル生成プロンプトの評価 |
+| 平均順位 | SEO効果測定 |
+
+**詳細:** [Phase 15: Prompt Intelligence](./Phase15_PromptIntelligence.md)

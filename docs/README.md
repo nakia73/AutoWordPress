@@ -56,7 +56,8 @@ docs/
     ├── Phase11_HeadlessEvaluation.md # Headless化評価
     ├── Phase12_ModelSelection.md   # LLMモデル選択
     ├── Phase13_BrandIdentity.md    # ブランド進化
-    └── Phase14_ReferralProgram.md  # リファラルプログラム
+    ├── Phase14_ReferralProgram.md  # リファラルプログラム
+    └── Phase15_PromptIntelligence.md # プロンプト効果分析
 ```
 
 ---

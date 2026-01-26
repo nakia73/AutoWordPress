@@ -2,7 +2,7 @@
 
 > **サービス名:** Argo Note
 > **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md)
-> **実装フェーズ:** [Phase 2: Core AI](../phases/Phase2_CoreAI.md), [Phase 5: Monetization](../phases/Phase5_Monetization.md)
+> **実装フェーズ:** [Phase 2: Core AI](../phases/Phase2_CoreAI.md), [Phase 5: Monetization](../phases/Phase5_Monetization.md), [Phase 10: GSC連携](../phases/Phase10_GSCIntegration.md), [Phase 15: Prompt Intelligence](../phases/Phase15_PromptIntelligence.md)
 
 ## バックエンド構成 (API)
 
@@ -60,6 +60,11 @@ WordPress Multisite用のデータベースとしてMariaDBを採用する理由
 | GeneratedImages | AI生成画像履歴 | Phase 7 |
 | CustomDomains | 独自ドメイン管理 | Phase 8 |
 | SSOTokens | シームレスログイン用トークン | Phase 9 |
+| ArticlePerformanceMetrics | GSCパフォーマンスデータ | Phase 10 |
+| PromptTemplates | プロンプトテンプレート管理 | Phase 15 |
+| ArticleGenerationLogs | 記事生成トレーサビリティログ | Phase 15 |
+| PromptEffectivenessScores | プロンプト効果スコア | Phase 15 |
+| ABTests | A/Bテスト管理 | Phase 15 |
 
 ---
 
@@ -245,6 +250,93 @@ CREATE TABLE sso_tokens (
 );
 
 CREATE INDEX idx_sso_tokens_expires ON sso_tokens(expires_at);
+```
+
+### GSC連携・パフォーマンス（Phase 10）
+
+```sql
+-- 記事パフォーマンス指標
+CREATE TABLE article_performance_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+  date_from DATE NOT NULL,
+  date_to DATE NOT NULL,
+  impressions INTEGER DEFAULT 0,
+  clicks INTEGER DEFAULT 0,
+  ctr DECIMAL(5, 2),
+  average_position DECIMAL(5, 2),
+  page_views INTEGER,
+  avg_time_on_page INTEGER,
+  bounce_rate DECIMAL(5, 2),
+  collected_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(article_id, date_from, date_to)
+);
+```
+
+### Prompt Intelligence（Phase 15）
+
+**詳細スキーマ:** [Phase 15: Prompt Intelligence](../phases/Phase15_PromptIntelligence.md#データベース設計) を参照
+
+```sql
+-- プロンプトテンプレート管理
+CREATE TABLE prompt_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  category VARCHAR(50),
+  target_genre VARCHAR(100),
+  prompt_text TEXT NOT NULL,
+  version VARCHAR(20) DEFAULT '1.0.0',
+  is_system BOOLEAN DEFAULT true,
+  is_public BOOLEAN DEFAULT false,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 記事生成ログ（トレーサビリティ）
+CREATE TABLE article_generation_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id),
+  prompt_template_id UUID REFERENCES prompt_templates(id),
+  llm_model VARCHAR(100),
+  temperature DECIMAL(3,2),
+  target_keyword VARCHAR(255),
+  search_intent VARCHAR(50),
+  generation_time_ms INTEGER,
+  api_cost_usd DECIMAL(10, 4),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- プロンプト効果スコア
+CREATE TABLE prompt_effectiveness_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prompt_template_id UUID REFERENCES prompt_templates(id),
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  pes_score DECIMAL(5, 2),
+  total_articles INTEGER,
+  avg_impressions DECIMAL(10, 2),
+  avg_clicks DECIMAL(10, 2),
+  avg_ctr DECIMAL(5, 2),
+  avg_position DECIMAL(5, 2),
+  calculated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- A/Bテスト管理
+CREATE TABLE ab_tests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  name VARCHAR(200) NOT NULL,
+  status VARCHAR(20) DEFAULT 'draft',
+  variants JSONB NOT NULL,
+  metrics TEXT[] NOT NULL,
+  duration_days INTEGER DEFAULT 14,
+  winner_variant_id VARCHAR(50),
+  statistical_significance DECIMAL(5, 2),
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ---
