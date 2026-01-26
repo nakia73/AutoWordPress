@@ -2,7 +2,7 @@
 
 ## メタ情報
 - **現在のフェーズ**: Phase 3
-- **総イテレーション数**: 14
+- **総イテレーション数**: 15
 - **最終更新**: 2026-01-27
 - **ステータス**: 🟡 進行中
 
@@ -227,20 +227,20 @@
 ### 4.1 スケジュール実行
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 4.1.1 execute-schedule 関数 | ⬜ | 0 | - | |
-| 4.1.2 ドラフト記事取得ロジック | ⬜ | 0 | - | |
-| 4.1.3 記事生成トリガー | ⬜ | 0 | - | |
-| 4.1.4 WordPress同期トリガー | ⬜ | 0 | - | |
-| 4.1.5 ScheduleJob ステータス更新 | ⬜ | 0 | - | |
+| 4.1.1 execute-schedule 関数 | ✅ | 1 | 15 | step分離,3リトライ |
+| 4.1.2 ドラフト記事取得ロジック | ✅ | 1 | 15 | articlesPerRun制限対応 |
+| 4.1.3 記事生成トリガー | ✅ | 1 | 15 | article/generateイベント |
+| 4.1.4 WordPress同期トリガー | ✅ | 1 | 15 | publishMode=publish時5m待機後sync |
+| 4.1.5 ScheduleJob ステータス更新 | ✅ | 1 | 15 | running→completed,詳細記録 |
 
 ### 4.2 Cron トリガー
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 4.2.1 schedule-cron 関数 | ⬜ | 0 | - | |
-| 4.2.2 期限切れスケジュール検索 | ⬜ | 0 | - | |
-| 4.2.3 スケジュールトリガー処理 | ⬜ | 0 | - | |
-| 4.2.4 次回実行時刻計算 | ⬜ | 0 | - | |
-| 4.2.5 trigger-schedule-manually 関数 | ⬜ | 0 | - | |
+| 4.2.1 schedule-cron 関数 | ✅ | 1 | 15 | 5分間隔,リトライ無し |
+| 4.2.2 期限切れスケジュール検索 | ✅ | 1 | 15 | nextRunAt<=now,isActive |
+| 4.2.3 スケジュールトリガー処理 | ✅ | 1 | 15 | scheduleJob作成+execute呼出 |
+| 4.2.4 次回実行時刻計算 | ✅ | 1 | 15 | cron式パース,曜日対応 |
+| 4.2.5 trigger-schedule-manually 関数 | ✅ | 1 | 15 | schedule/trigger-manualイベント |
 
 ---
 
@@ -249,31 +249,31 @@
 ### 5.1 Stripe 基盤
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 5.1.1 Stripe クライアント設定 | ⬜ | 0 | - | |
-| 5.1.2 プラン定義 | ⬜ | 0 | - | |
-| 5.1.3 createCheckoutSession ヘルパー | ⬜ | 0 | - | |
-| 5.1.4 createPortalSession ヘルパー | ⬜ | 0 | - | |
+| 5.1.1 Stripe クライアント設定 | ✅ | 1 | 15 | apiVersion指定,typescript有効 |
+| 5.1.2 プラン定義 | ✅ | 1 | 15 | TRIAL/STARTER/PRO,PRICES定義 |
+| 5.1.3 createCheckoutSession ヘルパー | ✅ | 1 | 15 | subscription mode,card対応 |
+| 5.1.4 createPortalSession ヘルパー | ✅ | 1 | 15 | billingPortal.sessions.create |
 
 ### 5.2 Stripe API
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 5.2.1 チェックアウトAPI | ⬜ | 0 | - | |
-| 5.2.2 カスタマーポータルAPI | ⬜ | 0 | - | |
-| 5.2.3 Webhook ハンドラー | ⬜ | 0 | - | |
-| 5.2.4 subscription.created 処理 | ⬜ | 0 | - | |
-| 5.2.5 subscription.updated 処理 | ⬜ | 0 | - | |
-| 5.2.6 subscription.deleted 処理 | ⬜ | 0 | - | |
-| 5.2.7 invoice.payment_succeeded 処理 | ⬜ | 0 | - | |
-| 5.2.8 invoice.payment_failed 処理 | ⬜ | 0 | - | |
+| 5.2.1 チェックアウトAPI | ✅ | 1 | 15 | customer作成/更新,priceId必須 |
+| 5.2.2 カスタマーポータルAPI | ✅ | 1 | 15 | stripeCustomerId必須チェック |
+| 5.2.3 Webhook ハンドラー | ✅ | 1 | 15 | 署名検証,upsertログ,6イベント |
+| 5.2.4 subscription.created 処理 | ✅ | 1 | 15 | handleSubscriptionChange共通 |
+| 5.2.5 subscription.updated 処理 | ✅ | 1 | 15 | handleSubscriptionChange共通 |
+| 5.2.6 subscription.deleted 処理 | ✅ | 1 | 15 | handleSubscriptionCanceled |
+| 5.2.7 invoice.payment_succeeded 処理 | ✅ | 1 | 15 | BillingHistory作成 |
+| 5.2.8 invoice.payment_failed 処理 | ✅ | 1 | 15 | past_dueステータス更新 |
 
 ### 5.3 課金UI
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 5.3.1 設定ページ | ⬜ | 0 | - | |
-| 5.3.2 課金ページ | ⬜ | 0 | - | |
-| 5.3.3 プラン表示 | ⬜ | 0 | - | |
-| 5.3.4 課金アクションコンポーネント | ⬜ | 0 | - | |
-| 5.3.5 請求履歴表示 | ⬜ | 0 | - | |
+| 5.3.1 設定ページ | ✅ | 1 | 15 | Account,Subscription,Usage,DangerZone |
+| 5.3.2 課金ページ | ✅ | 1 | 15 | success/canceledメッセージ |
+| 5.3.3 プラン表示 | ✅ | 1 | 15 | 3プラン,features一覧 |
+| 5.3.4 課金アクションコンポーネント | ✅ | 1 | 15 | BillingActions存在確認 |
+| 5.3.5 請求履歴表示 | ✅ | 1 | 15 | billingHistory一覧,status badge |
 
 ---
 
