@@ -2,7 +2,7 @@
 
 ## メタ情報
 - **現在のフェーズ**: Phase 1
-- **総イテレーション数**: 1
+- **総イテレーション数**: 2
 - **最終更新**: 2026-01-27
 - **ステータス**: 🟡 進行中
 
@@ -44,17 +44,17 @@
 ### 1.2 データベース
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
 |--------|------|----------|----------|------|
-| 1.2.1 Prisma 初期化 | ⬜ | 0 | - | |
-| 1.2.2 User モデル定義 | ⬜ | 0 | - | |
-| 1.2.3 Site モデル定義 | ⬜ | 0 | - | |
-| 1.2.4 Product モデル定義 | ⬜ | 0 | - | |
-| 1.2.5 ArticleCluster モデル定義 | ⬜ | 0 | - | |
-| 1.2.6 Article モデル定義 | ⬜ | 0 | - | |
-| 1.2.7 Job モデル定義 | ⬜ | 0 | - | |
-| 1.2.8 Schedule/ScheduleJob モデル定義 | ⬜ | 0 | - | |
-| 1.2.9 BillingHistory モデル定義 | ⬜ | 0 | - | |
-| 1.2.10 ログ系モデル定義 (ActivityLog等) | ⬜ | 0 | - | |
-| 1.2.11 Prisma Client 生成 | ⬜ | 0 | - | |
+| 1.2.1 Prisma 初期化 | ✅ | 1 | 2 | PostgreSQL設定済み |
+| 1.2.2 User モデル定義 | ✅ | 1 | 2 | Stripe連携フィールド含む |
+| 1.2.3 Site モデル定義 | ✅ | 1 | 2 | WP連携,CustomDomain対応 |
+| 1.2.4 Product モデル定義 | ✅ | 1 | 2 | 分析結果JSON,画像設定 |
+| 1.2.5 ArticleCluster モデル定義 | ✅ | 1 | 2 | pillarKeyword対応 |
+| 1.2.6 Article モデル定義 | ✅ | 1 | 2 | SEO,WP連携,画像対応 |
+| 1.2.7 Job モデル定義 | ✅ | 1 | 2 | リトライ,ログ対応 |
+| 1.2.8 Schedule/ScheduleJob モデル定義 | ✅ | 1 | 2 | Cron,詳細ログ対応 |
+| 1.2.9 BillingHistory モデル定義 | ✅ | 1 | 2 | Stripe単位対応 |
+| 1.2.10 ログ系モデル定義 (ActivityLog等) | ✅ | 1 | 2 | UserActivity,Deletion,Webhook |
+| 1.2.11 Prisma Client 生成 | ✅ | 1 | 2 | lib/prisma/client.ts |
 
 ### 1.3 認証 (Supabase)
 | タスク | 状態 | 実行回数 | 最終iter | 備考 |
