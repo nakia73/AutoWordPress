@@ -760,7 +760,7 @@ Step 6: 本開発開始（Phase 1〜）
 
 | コンポーネント | 技術 | 理由 |
 |---------------|------|------|
-| WordPress | Multisite on DigitalOcean VPS | 複数サイトを効率的に管理 |
+| WordPress | Multisite on Hetzner VPS | 複数サイトを効率的に管理 |
 | Webサーバー | Nginx + PHP-FPM | 高性能・低リソース |
 | DB | MariaDB（同一VPS） | WordPress標準 |
 | CDN | Cloudflare | 高速化・DDoS防御 |
@@ -796,7 +796,7 @@ Step 6: 本開発開始（Phase 1〜）
 | 項目 | 選定 |
 |------|------|
 | 暗号化方式 | AES-256-GCM（認証付き暗号化） |
-| キー管理 | 環境変数（`WP_TOKEN_ENCRYPTION_KEY`） |
+| キー管理 | 環境変数（`ENCRYPTION_KEY`） |
 | キーローテーション | Phase 2以降 |
 
 ---
@@ -823,7 +823,7 @@ Step 6: 本開発開始（Phase 1〜）
 | 項目 | 選定 |
 |------|------|
 | 許容サイト数 | 100サイトまで |
-| バックアップ | DigitalOcean Backups（週次） |
+| バックアップ | Cloudflare R2 + cron（日次） |
 | 監視 | UptimeRobot（無料） |
 | アラート | Slack/Discord |
 | 復旧目標 | 4時間以内 |
@@ -879,15 +879,22 @@ Step 6: 本開発開始（Phase 1〜）
 
 #### E8. Fact Check方針（Q14回答）
 
-**決定事項: システムによるFact Check（MVP後） + 参照ソース明示**
+**決定事項（2026-01-27更新）: Fact Checkはユーザー責任 + 参照ソース明示**
+
+> **設計決定:** システムによるFact Checkは実装しない。内容の真実性・正確性の確認はユーザーの責任とする。
 
 | 対策 | MVP | MVP後 |
 |------|-----|-------|
 | 参照ソース明示 | ○ | ○ |
-| ユーザーが内容を確認できる導線（下書き選択時） | ○ | ○ |
+| ユーザーが内容を確認できる導線 | ○ | ○ |
 | AI生成免責表示 | ○ | ○ |
-| システムによるFact Check | × | ○ |
-| 別LLMクロスチェック | × | ○ |
+| システムによるFact Check | × | × |
+| 別LLMクロスチェック | × | × |
+
+**理由:**
+- システムの複雑性を削減
+- 責任の分離を明確化（品質保証はユーザー責任）
+- 利用規約に「コンテンツの正確性確認はユーザー責任」を明記予定
 
 ---
 
@@ -1066,7 +1073,7 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 | 監視対象 | ツール |
 |---------|--------|
 | サイト稼働 | UptimeRobot（無料） |
-| VPSリソース | DigitalOcean Monitoring |
+| VPSリソース | Hetzner Cloud Console |
 | アプリエラー | Sentry（無料枠） |
 | 通知先 | Slack |
 
@@ -1326,7 +1333,7 @@ Phase 2以降:
 **LiteSpeed Cacheについて:**
 - LiteSpeedサーバー専用（サーバーレベルキャッシュ）
 - PageSpeed 83→99の改善実績あり
-- DigitalOceanはデフォルトでNginxのため、MVP時点では不採用
+- HetznerはデフォルトでNginxのため、MVP時点では不採用
 - 将来的にLiteSpeedサーバーへ移行検討時に再評価
 
 ---
@@ -1383,8 +1390,24 @@ Phase 3 (Scale):
 
 | フェーズ | 対応 |
 |---------|------|
-| MVP | Nanobana Pro |
-| Phase 2 | Nanobana Pro（機能拡張・品質改善） |
+| MVP | **kie.ai Nano Banana Pro（主要）** + Google公式API（フォールバック） |
+| Phase 2 | kie.ai + Google公式（機能拡張・品質改善） |
+
+**2026-01-27 追記: kie.ai採用決定**
+
+| 項目 | 内容 |
+|------|------|
+| **決定事項** | kie.ai Nano Banana Proを主要画像プロバイダーとして採用 |
+| **理由** | コスト33%削減（$0.09/image vs Google公式$0.134/image） |
+| **フォールバック** | kie.ai失敗時はGoogle公式APIにフォールバック |
+| **実装状況** | ドキュメント更新済み、コード実装は未完了 |
+| **参照** | [コスト・収益分析](./business/Cost_Revenue_Analysis.md) |
+
+**コスト比較:**
+```
+Google公式: $0.134/image
+kie.ai:     $0.090/image → 33%削減
+```
 
 #### G9. サブドメイン形式（Q41回答）
 
@@ -1583,7 +1606,10 @@ Phase 6:   MVP Launch
 
 #### H16. VPSプロバイダ（Q60回答）
 
-**決定事項: DigitalOcean**
+**決定事項: Hetzner**（2026-01-27更新: DigitalOceanから変更）
+
+**選定理由:** コスト効率（DigitalOcean比79-84%削減）。Cloudflare CDNでレイテンシをカバー。
+**詳細:** [VPSプロバイダー選定](./architecture/11_VPS_Provider_Selection.md)
 
 ---
 
@@ -1605,7 +1631,7 @@ Phase 6:   MVP Launch
 
 | 項目 | 予算配分案 |
 |------|-----------|
-| VPS（DigitalOcean） | $24/月 |
+| VPS（Hetzner） | €4.49/月 (~$5) |
 | ドメイン | $12/年（≒$1/月） |
 | Supabase | 無料枠 |
 | Vercel | 無料枠 |
@@ -1759,11 +1785,13 @@ Phase 6:   MVP Launch
 | 資産 | 内容 | 実装状況 |
 |------|------|----------|
 | Tavily → LLM記事生成 | 記事コンセプトをTavily APIで検索し、取得情報をもとにLLMで記事生成 | ✅ 実装完了 |
-| NanoBanana Pro画像生成 | H2見出しごとのセクションを参照し、見出し画像を生成 | ✅ 実装完了 |
+| 画像生成（Google公式） | H2見出しごとのセクションを参照し、見出し画像を生成 | ✅ 実装完了 |
+| kie.ai統合 | kie.aiを主要プロバイダーとしてコスト最適化 | 🔲 実装待ち |
 
 **実装詳細:**
 - **Tavily検索強化:** 3段階マルチフェーズ検索（NEWS/SNS/OFFICIAL）、スコアフィルタリング実装
 - **画像生成:** サムネイル・セクション画像の自動生成、HTML自動挿入実装
+- **kie.ai統合:** コスト33%削減のため、kie.aiを主要プロバイダーとして追加予定（G8参照）
 - **実装ファイル:** `tavily-client.ts`, `image-generator.ts`, `section-image-service.ts`
 - **詳細:** [RAPID_NOTE_INTEGRATION_TASKS.md](./RAPID_NOTE_INTEGRATION_TASKS.md)
 
@@ -1862,12 +1890,12 @@ Phase 6:   MVP Launch
 - [x] E5. DB構成 → **Supabase + MariaDB**（Q11）
 - [x] E6. LLM選択 → **Gemini 3.0 Pro（ソフトコーディング、フォールバックなし）**（Q12）
 - [x] E7. スクレイピングAPI → **Firecrawl + Jina Reader**（Q13）
-- [x] E8. Fact Check → **システムFact Check（MVP後） + 参照ソース明示**（Q14）
+- [x] E8. Fact Check → **ユーザー責任 + 参照ソース明示**（Q14）【2026-01-27更新】
 - [x] E9. プロンプト管理 → **YAML + Git → Langfuse**（Q15）
 - [x] E10. Multisiteスケール → **段階的対応**（Q16）
 - [x] E11. メディアストレージ → **Cloudflare R2**（Q17）
-- [x] E12. 画像生成API → **Nanobana Pro**（G8参照）
-- [x] E13. VPSプロバイダ → **DigitalOcean**（H16参照）
+- [x] E12. 画像生成API → **kie.ai Nano Banana Pro + Google公式フォールバック**（G8参照）
+- [x] E13. VPSプロバイダ → **Hetzner**（H16参照）【2026-01-27更新】
 
 ### F. ビジネス戦略
 - [x] F1. 初期獲得チャネル → **X/Threads、Product Hunt、自社SEOブログ**（H2参照）

@@ -21,7 +21,7 @@
 
 ### Step 1: VPS & ドメイン基盤
 
-- DigitalOcean での Droplet 構築（$24/mo）
+- Hetzner Cloud での VPS 構築（CX21: €4.49/mo ≈ $5/mo）→ [選定理由](../architecture/11_VPS_Provider_Selection.md)
 - `argonote.app` を取得し、ワイルドカードDNS（`*.argonote.app` → VPS IP）を設定
 
 ### Step 2: Security & Wildcard SSL
@@ -46,15 +46,120 @@
 ### Step 5: 監視・バックアップ
 
 - UptimeRobot（サイト稼働監視）
-- DigitalOcean Monitoring（リソース監視）
-- DigitalOcean Backups（週次自動バックアップ）
+- Hetzner Cloud Console（リソース監視）
+- Cloudflare R2 + cronスクリプト（日次自動バックアップ）→ [バックアップ戦略](../architecture/11_VPS_Provider_Selection.md#5-バックアップ戦略)
 
 ---
 
-## 3. 成功基準
+## 3. 実装チェックリスト（2026-01-27 追加）
+
+### Step 1: VPS & ドメイン基盤
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| Hetzner Cloud VPS作成 | ⬜ 未完了 | CX21: €4.49/mo |
+| Ubuntu 22.04 LTS インストール | ⬜ 未完了 | |
+| `argonote.app` ドメイン取得 | ⬜ 未完了 | |
+| Cloudflareへドメイン追加 | ⬜ 未完了 | |
+| ワイルドカードDNS設定 (`*.argonote.app`) | ⬜ 未完了 | |
+
+### Step 2: Security & Wildcard SSL
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| Cloudflare SSL設定（Full Strict） | ⬜ 未完了 | |
+| オリジン証明書の発行・設置 | ⬜ 未完了 | |
+| Cloudflare WAF有効化 | ⬜ 未完了 | |
+| VPSファイアウォール設定 | ⬜ 未完了 | 443, 22のみ許可 |
+
+### Step 3: WordPress Multisite
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| Nginx インストール・設定 | ⬜ 未完了 | |
+| PHP-FPM インストール・設定 | ⬜ 未完了 | PHP 8.2+ |
+| MariaDB インストール・設定 | ⬜ 未完了 | |
+| WordPress インストール | ⬜ 未完了 | |
+| Multisite有効化 | ⬜ 未完了 | サブドメイン方式 |
+| WP-CLI インストール | ⬜ 未完了 | |
+| `wp site create` 動作確認 | ⬜ 未完了 | |
+
+### Step 4: 認証基盤
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| Supabase プロジェクト作成 | ✅ 完了 | |
+| Supabase Auth 設定 | ✅ 完了 | `app/src/lib/supabase/` |
+| Google OAuth 設定 | ✅ 完了 | |
+| セッション管理 | ✅ 完了 | middleware.ts |
+| ログインUI | ✅ 完了 | `app/src/app/(auth)/login/` |
+
+### Step 5: アプリケーション統合
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| `ssh2` ライブラリ導入 | ✅ 完了 | `npm install ssh2 @types/ssh2` (2026-01-27) |
+| SSH接続クライアント実装 | ✅ 完了 | `app/src/lib/vps/ssh-client.ts` |
+| WP-CLI実行関数実装 | ✅ 完了 | `app/src/lib/vps/wp-cli.ts` |
+| Cloudflare APIクライアント実装 | ⏭️ スキップ | ワイルドカードDNS使用で不要 |
+| `provision-blog.ts` 完成 | ✅ 完了 | WP-CLI経由でサイト作成・テーマ設定 |
+| `provision_failed` ステータス遷移実装 | ✅ 完了 | `onFailure` ハンドラー実装済み |
+
+### Step 6: 監視・バックアップ
+
+| タスク | 状態 | 備考 |
+|--------|------|------|
+| UptimeRobot 設定 | ⬜ 未完了 | |
+| Hetzner Cloud Console 監視設定 | ⬜ 未完了 | |
+| R2バックアップスクリプト設定 | ⬜ 未完了 | cron + rclone |
+| Sentry 統合 | ⬜ 未完了 | 環境変数定義済み・未使用 |
+| PostHog 統合 | ⬜ 未完了 | 環境変数定義済み・未使用 |
+
+---
+
+## 4. 必要な環境変数
+
+```bash
+# VPS接続
+VPS_HOST="xxx.xxx.xxx.xxx"
+VPS_SSH_PRIVATE_KEY="base64-encoded-key"
+VPS_SSH_USER="root"
+
+# WordPress
+WP_DOMAIN="argonote.app"
+# Encryption (AES-256-GCM)
+# Generate with: openssl rand -hex 32
+ENCRYPTION_KEY="64-char-hex-string"
+
+# Cloudflare
+CLOUDFLARE_API_TOKEN="..."
+CLOUDFLARE_ZONE_ID="..."
+CLOUDFLARE_ACCOUNT_ID="..."
+
+# 監視
+SENTRY_DSN="https://..."
+POSTHOG_KEY="phc_..."
+```
+
+---
+
+## 5. 成功基準
 
 - サーバー上でコマンド一つ叩けば、`https://demo.argonote.app` が SSL 有効な状態で一瞬で立ち上がること
 - Supabase Authでユーザー登録・ログインができること
 - Google OAuth でワンクリックログインができること
 - セキュリティ設定（Firewall等）が正しく施されていること
 - 監視・バックアップが正常に動作していること
+
+---
+
+## 6. 関連Issue
+
+| Issue ID | 問題 | 重大度 | ステータス |
+|----------|------|--------|-----------|
+| IR-NEW-021 | provision-blog実装未完了（TODO状態） | 🔴 Critical | ✅ **解決** (2026-01-27) |
+| IR-NEW-025 | WordPress VPS環境変数未使用 | 🟡 Low | ✅ **解決** - ssh-client.ts/wp-cli.tsで使用 |
+| IR-NEW-026 | Cloudflare環境変数未使用 | 🟡 Low | ⏭️ スキップ - ワイルドカードDNS使用 |
+| IR-NEW-028 | 監視機能未実装（Sentry/PostHog） | 🟡 Low | ⬜ 未完了 - MVP後対応 |
+
+詳細は [10_Comprehensive_Critical_Issues_Report.md](../architecture/10_Comprehensive_Critical_Issues_Report.md) を参照

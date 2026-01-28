@@ -1,11 +1,23 @@
 # 09. ファーストプリンシプル分析：致命的問題点レポート
 
+> ⚠️ **注意: 本レポートは統合されました**
+>
+> 本レポートの内容は [10_Comprehensive_Critical_Issues_Report.md](./10_Comprehensive_Critical_Issues_Report.md) に統合されました。
+> **新たな問題発見時は、統合レポート（10）に追記してください。**
+>
+> 本ファイルは参照用に保持されていますが、最新情報は統合レポートを参照してください。
+>
+> ---
+> **設計決定（2026-01-27）:** 本レポート内のFact Check関連の記述（CI-001等）は廃止されました。
+> Fact Checkはシステムで実装せず、コンテンツの正確性確認はユーザーの責任とする設計決定がなされました。
+> 詳細: [CONCEPT_DECISIONS.md E8](../CONCEPT_DECISIONS.md)
+
+---
+
 > **サービス名:** Argo Note
 > **作成日:** 2026年1月26日
 > **分析手法:** First Principles Thinking × 10 Iteration Ralph Wiggum Loop
-> **関連ドキュメント:** [コンセプト決定](../CONCEPT_DECISIONS.md) | [整合性リスクレポート](./08_Integration_Risk_Report.md) | [**50イテレーション包括レポート**](./10_Comprehensive_Critical_Issues_Report.md)
->
-> **注意:** 本レポートは10イテレーション分析の結果です。より詳細な50イテレーション分析については [10_Comprehensive_Critical_Issues_Report.md](./10_Comprehensive_Critical_Issues_Report.md) を参照してください。
+> **ステータス:** 統合済み（→ 10_Comprehensive_Critical_Issues_Report.md）
 
 ---
 
@@ -224,7 +236,7 @@ Phase A → Phase B → Phase C → Phase D → Phase E → Phase F → Phase G
 | Auth, DB | Supabase | なし |
 | LLM | Gemini 3.0 Pro | なし（意図的） |
 | 決済 | Stripe | なし |
-| Hosting | DigitalOcean | なし |
+| Hosting | Hetzner | なし |
 | Worker | Inngest | なし |
 
 **問題:** 各機能で単一ベンダーに依存。ベンダー障害時の影響が大きい。

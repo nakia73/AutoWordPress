@@ -8,6 +8,11 @@ export const executeSchedule = inngest.createFunction(
   {
     id: 'execute-schedule',
     retries: 3,
+    // Only one schedule execution at a time per schedule
+    concurrency: {
+      limit: 1,
+      key: 'event.data.scheduleId',
+    },
   },
   { event: 'schedule/execute' },
   async ({ event, step }) => {
@@ -117,22 +122,64 @@ export const executeSchedule = inngest.createFunction(
       generationResults.push(result);
     }
 
-    // If publish mode is 'publish', trigger WordPress sync for completed articles
+    // If publish mode is 'publish', wait for generation and trigger WordPress sync
     if (schedule.publishMode === 'publish') {
-      await step.sleep('wait-for-generation', '5m'); // Wait for generation to complete
+      const triggeredArticleIds = generationResults
+        .filter((r) => r.status === 'triggered')
+        .map((r) => r.articleId);
 
-      for (const result of generationResults) {
-        if (result.status === 'triggered') {
-          await step.run(`sync-wordpress-${result.articleId}`, async () => {
-            const article = await prisma.article.findUnique({
-              where: { id: result.articleId },
+      if (triggeredArticleIds.length > 0) {
+        // Poll for article completion with exponential backoff
+        // Max 10 attempts: 30s, 30s, 30s, 30s, 60s, 60s, 60s, 120s, 120s, 120s = ~11 minutes total
+        const pollIntervals = [30, 30, 30, 30, 60, 60, 60, 120, 120, 120]; // seconds
+        let completedArticles: string[] = [];
+
+        for (let attempt = 0; attempt < pollIntervals.length; attempt++) {
+          // Wait before checking
+          await step.sleep(`wait-poll-${attempt}`, `${pollIntervals[attempt]}s`);
+
+          // Check article statuses
+          const statusCheck = await step.run(`check-article-status-${attempt}`, async () => {
+            const articles = await prisma.article.findMany({
+              where: {
+                id: { in: triggeredArticleIds },
+              },
+              select: {
+                id: true,
+                status: true,
+              },
             });
 
+            const completed = articles
+              .filter((a) => a.status === 'review' || a.status === 'failed')
+              .map((a) => a.id);
+
+            const stillGenerating = articles.filter((a) => a.status === 'generating').length;
+
+            return { completed, stillGenerating, total: articles.length };
+          });
+
+          completedArticles = statusCheck.completed;
+
+          // If all articles are done (review or failed), break early
+          if (statusCheck.stillGenerating === 0) {
+            break;
+          }
+        }
+
+        // Sync completed articles to WordPress
+        for (const articleId of completedArticles) {
+          await step.run(`sync-wordpress-${articleId}`, async () => {
+            const article = await prisma.article.findUnique({
+              where: { id: articleId },
+            });
+
+            // Only sync articles that successfully reached 'review' status
             if (article?.status === 'review' && schedule.siteId) {
               await inngest.send({
                 name: 'wordpress/sync',
                 data: {
-                  articleId: result.articleId,
+                  articleId: articleId,
                   siteId: schedule.siteId,
                   action: 'create' as const,
                 },

@@ -104,7 +104,7 @@ docs/
 | Image | Nanobana Pro | |
 | Storage | **Cloudflare R2** | エグレス無料 |
 | Payment | Stripe | |
-| Hosting | Vercel (App), **DigitalOcean VPS** (WordPress) | |
+| Hosting | Vercel (App), **Hetzner VPS** (WordPress) | |
 | Monitoring | **UptimeRobot, Sentry, PostHog** | |
 | CDN/Security | Cloudflare | |
 

@@ -13,7 +13,7 @@ Argo Note is an AI-powered blog automation platform that helps users create, man
 - **LLM Integration**: Gemini 2.0 Flash via LiteLLM proxy
 - **Web Research**: Tavily API for real-time research
 - **Product Analysis**: 5-phase AI pipeline (A-E)
-- **Article Generation**: SEO-optimized content with fact-checking
+- **Article Generation**: SEO-optimized content with source citations
 
 ### Phase 3: User Interface
 - Responsive dashboard with navigation

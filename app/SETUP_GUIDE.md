@@ -14,11 +14,13 @@
 6. [Tavily API セットアップ](#6-tavily-api-セットアップ)
 7. [Inngest セットアップ](#7-inngest-セットアップ)
 8. [Cloudflare R2 セットアップ（オプション）](#8-cloudflare-r2-セットアップオプション)
-9. [環境変数の設定](#9-環境変数の設定)
-10. [データベースセットアップ](#10-データベースセットアップ)
-11. [ローカル開発環境の起動](#11-ローカル開発環境の起動)
-12. [本番環境デプロイ](#12-本番環境デプロイ)
-13. [トラブルシューティング](#13-トラブルシューティング)
+9. [WordPress VPS セットアップ](#9-wordpress-vps-セットアップ) ⭐ **ブログ機能に必須**
+10. [ドメイン・Cloudflare セットアップ](#10-ドメインcloudflare-セットアップ) ⭐ **ブログ機能に必須**
+11. [環境変数の設定](#11-環境変数の設定)
+12. [データベースセットアップ](#12-データベースセットアップ)
+13. [ローカル開発環境の起動](#13-ローカル開発環境の起動)
+14. [本番環境デプロイ](#14-本番環境デプロイ)
+15. [トラブルシューティング](#15-トラブルシューティング)
 
 ---
 
@@ -38,11 +40,20 @@
 
 | サービス | 用途 | 登録URL |
 |---------|------|---------|
+| DigitalOcean | WordPress VPS | https://www.digitalocean.com/ |
+| Cloudflare | DNS・SSL・WAF | https://www.cloudflare.com/ |
 | Supabase | 認証・データベース | https://supabase.com/ |
 | Stripe | 決済処理 | https://stripe.com/ |
 | LiteLLM | AI/LLM プロキシ | https://litellm.ai/ |
 | Tavily | Web検索API | https://tavily.com/ |
 | Inngest | バックグラウンドジョブ | https://inngest.com/ |
+
+### 必須インフラ（ブログ機能に必要）
+
+| インフラ | 用途 | 費用目安 |
+|---------|------|---------|
+| VPS (DigitalOcean) | WordPress Multisite | $24/月 |
+| ドメイン | *.argonote.app 等 | $10-15/年 |
 
 ### オプションアカウント
 
@@ -514,11 +525,407 @@ Inngest Dev Server running at http://127.0.0.1:8288
 
 ---
 
-## 9. 環境変数の設定
+## 9. WordPress VPS セットアップ
+
+ブログ機能を動作させるには、WordPress Multisite を構築した VPS が必要です。
+
+### 9.1 DigitalOcean Droplet 作成
+
+1. **DigitalOcean にログイン:** https://cloud.digitalocean.com/
+
+2. **Droplet 作成:**
+   - 右上の「Create」→「Droplets」をクリック
+   - 以下の設定を選択:
+
+   | 設定項目 | 推奨値 |
+   |---------|--------|
+   | Region | Singapore (SGP1) ※日本からのレイテンシが低い |
+   | OS | Ubuntu 22.04 (LTS) x64 |
+   | Droplet Type | Basic |
+   | CPU options | Regular (Disk type: SSD) |
+   | Size | $24/mo (2 vCPU / 4GB RAM / 80GB SSD) |
+
+3. **認証方法の選択:**
+
+   **SSH Keys（推奨）:**
+   ```bash
+   # 既存の公開鍵を表示
+   cat ~/.ssh/id_rsa.pub
+
+   # 鍵がない場合は新規作成
+   ssh-keygen -t rsa -b 4096 -C "argo-note-vps"
+   ```
+   表示された公開鍵をDigitalOceanに登録
+
+4. **Droplet 作成:**
+   - 「Create Droplet」をクリック
+   - 作成完了後、表示される **IPアドレス** をメモ
+
+5. **SSH接続テスト:**
+   ```bash
+   ssh root@<YOUR_IP_ADDRESS>
+   ```
+
+### 9.2 サーバー初期設定
+
+SSH接続後、以下のコマンドを順に実行します。
+
+```bash
+# システム更新
+apt update && apt upgrade -y
+
+# タイムゾーン設定（日本）
+timedatectl set-timezone Asia/Tokyo
+
+# 必要パッケージインストール
+apt install -y nginx mariadb-server php8.1-fpm php8.1-mysql php8.1-curl \
+  php8.1-gd php8.1-intl php8.1-mbstring php8.1-soap php8.1-xml \
+  php8.1-xmlrpc php8.1-zip php8.1-imagick unzip curl
+
+# ファイアウォール設定
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+### 9.3 MariaDB セットアップ
+
+```bash
+# MariaDB 初期設定
+mysql_secure_installation
+```
+
+プロンプトに以下のように回答:
+- Set root password: Y → 強力なパスワードを設定（メモする）
+- Remove anonymous users: Y
+- Disallow root login remotely: Y
+- Remove test database: Y
+- Reload privilege tables: Y
+
+```bash
+# WordPress用データベース作成
+mysql -u root -p
+
+# MySQLプロンプトで以下を実行
+CREATE DATABASE wordpress DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'wordpress'@'localhost' IDENTIFIED BY 'YOUR_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+### 9.4 WordPress インストール
+
+```bash
+# WordPress ダウンロード
+cd /var/www
+curl -O https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+rm latest.tar.gz
+
+# 権限設定
+chown -R www-data:www-data /var/www/wordpress
+chmod -R 755 /var/www/wordpress
+
+# wp-config.php 作成
+cd /var/www/wordpress
+cp wp-config-sample.php wp-config.php
+```
+
+`wp-config.php` を編集:
+```bash
+nano /var/www/wordpress/wp-config.php
+```
+
+以下を変更:
+```php
+define( 'DB_NAME', 'wordpress' );
+define( 'DB_USER', 'wordpress' );
+define( 'DB_PASSWORD', 'YOUR_STRONG_PASSWORD' );
+define( 'DB_HOST', 'localhost' );
+
+// Multisite有効化（ファイル末尾の require_wp_settings.php の前に追加）
+define( 'WP_ALLOW_MULTISITE', true );
+```
+
+セキュリティキーを生成（https://api.wordpress.org/secret-key/1.1/salt/ からコピー）
+
+### 9.5 Nginx 設定
+
+```bash
+# Nginx設定ファイル作成
+nano /etc/nginx/sites-available/wordpress
+```
+
+以下の内容を貼り付け（`YOUR_DOMAIN` を実際のドメインに置換）:
+
+```nginx
+server {
+    listen 80;
+    server_name YOUR_DOMAIN *.YOUR_DOMAIN;
+    root /var/www/wordpress;
+    index index.php index.html;
+
+    # アップロードサイズ上限
+    client_max_body_size 64M;
+
+    # Multisite用リライト
+    if (!-e $request_filename) {
+        rewrite /wp-admin$ $scheme://$host$uri/ permanent;
+        rewrite ^(/[^/]+)?(/wp-.*) $2 last;
+        rewrite ^(/[^/]+)?(/.*\.php) $2 last;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    # uploads ディレクトリでPHP実行禁止（セキュリティ）
+    location ~* /wp-content/uploads/.*\.php$ {
+        deny all;
+    }
+}
+```
+
+```bash
+# 設定有効化
+ln -s /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+# 設定テスト & 再起動
+nginx -t
+systemctl restart nginx
+```
+
+### 9.6 WordPress Multisite 有効化
+
+1. **ブラウザでWordPressにアクセス:**
+   - `http://YOUR_IP_ADDRESS` または `http://YOUR_DOMAIN`
+   - WordPress インストール画面が表示される
+   - サイト情報を入力してインストール完了
+
+2. **Multisite有効化:**
+   - 管理画面 → ツール → サイトネットワークの設置
+   - 「サブドメイン」を選択
+   - 「インストール」をクリック
+
+3. **wp-config.php に追記:**
+   表示された設定を `wp-config.php` に追記
+
+4. **.htaccess または Nginx設定更新:**
+   表示されたリライトルールを適用
+
+### 9.7 WP-CLI インストール
+
+```bash
+# WP-CLI ダウンロード
+curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+
+# 実行権限付与 & パスに配置
+chmod +x wp-cli.phar
+mv wp-cli.phar /usr/local/bin/wp
+
+# 動作確認
+wp --info --allow-root
+```
+
+**サイト作成テスト:**
+```bash
+cd /var/www/wordpress
+wp site create --slug=test --title="Test Site" --email=admin@example.com --allow-root
+
+# 作成されたサイト一覧確認
+wp site list --allow-root
+```
+
+### 9.8 セキュリティ強化
+
+```bash
+# wp-config.php を編集
+nano /var/www/wordpress/wp-config.php
+```
+
+以下を追記:
+```php
+// ファイル編集禁止（セキュリティ）
+define( 'DISALLOW_FILE_EDIT', true );
+define( 'DISALLOW_FILE_MODS', true );
+
+// 自動更新有効化
+define( 'WP_AUTO_UPDATE_CORE', true );
+```
+
+---
+
+## 10. ドメイン・Cloudflare セットアップ
+
+### 10.1 ドメイン取得
+
+#### TLD（トップレベルドメイン）の選択
+
+WordPress Multisite は**どのTLDでも動作**します。SEOやブランディングを考慮して選択してください。
+
+| TLD | 推奨度 | メリット | デメリット |
+|-----|--------|---------|-----------|
+| **.com** | ⭐⭐⭐ | 信頼性No.1、一般ユーザーに最適、SEO実績が豊富 | 取得困難（多くが取得済み） |
+| **.app** | ⭐⭐ | 開発者向けサービスに親和性、HTTPS強制 | 一般ユーザーには馴染み薄い |
+| **.io** | ⭐⭐ | テック系に人気、スタートアップ感 | 価格が高め |
+
+**推奨:**
+- **一般ユーザー向け:** `.com` を強く推奨
+- **開発者向けサービス:** `.app` または `.io` も可
+
+#### レジストラ
+
+| レジストラ | URL | 備考 |
+|-----------|-----|------|
+| Cloudflare Registrar | https://www.cloudflare.com/products/registrar/ | Cloudflare統合が最も簡単、原価販売 |
+| Google Domains | https://domains.google/ | 安定・シンプル |
+| Namecheap | https://www.namecheap.com/ | 低価格 |
+| お名前.com | https://www.onamae.com/ | 日本語サポート |
+
+**ドメイン例:**
+- `.com` 推奨: `argonote.com`, `yourbrand.com`
+- 代替: `argonote.app`, `argonote.io`
+
+### 10.2 Cloudflare にドメイン追加
+
+1. **Cloudflare にログイン:** https://dash.cloudflare.com/
+
+2. **サイト追加:**
+   - 「Add a Site」をクリック
+   - ドメイン名を入力
+   - 「Free」プランを選択
+   - 「Continue」をクリック
+
+3. **ネームサーバー変更:**
+   - 表示される Cloudflare のネームサーバー 2つをメモ
+   - ドメインレジストラの管理画面でネームサーバーを変更
+   - 反映まで最大24時間（通常は数分〜数時間）
+
+### 10.3 DNS レコード設定
+
+Cloudflare DNS 設定画面で以下を追加:
+
+| Type | Name | Content | Proxy status |
+|------|------|---------|--------------|
+| A | @ | `YOUR_VPS_IP` | Proxied (オレンジ雲) |
+| A | * | `YOUR_VPS_IP` | Proxied (オレンジ雲) |
+
+**重要:** ワイルドカード (`*`) レコードにより、全てのサブドメインがVPSに向きます。
+
+### 10.4 SSL/TLS 設定
+
+1. **SSL/TLS** → **Overview** をクリック
+
+2. **暗号化モード設定:**
+   - 「Full (strict)」を選択
+
+3. **Edge Certificates:**
+   - 「Always Use HTTPS」をオン
+   - 「Automatic HTTPS Rewrites」をオン
+
+### 10.5 オリジン証明書の設置（VPS側）
+
+1. **Cloudflare** → **SSL/TLS** → **Origin Server**
+
+2. **「Create Certificate」をクリック:**
+   - Private key type: RSA (2048)
+   - Hostnames: `*.yourdomain.com`, `yourdomain.com`
+   - Certificate Validity: 15 years
+   - 「Create」をクリック
+
+3. **証明書をVPSに設置:**
+   ```bash
+   # 証明書ディレクトリ作成
+   mkdir -p /etc/nginx/ssl
+
+   # Origin Certificate を保存（Cloudflareからコピー）
+   nano /etc/nginx/ssl/cloudflare.crt
+
+   # Private Key を保存（Cloudflareからコピー）
+   nano /etc/nginx/ssl/cloudflare.key
+
+   # 権限設定
+   chmod 600 /etc/nginx/ssl/cloudflare.key
+   ```
+
+4. **Nginx SSL設定更新:**
+   ```bash
+   nano /etc/nginx/sites-available/wordpress
+   ```
+
+   以下に更新:
+   ```nginx
+   server {
+       listen 80;
+       server_name YOUR_DOMAIN *.YOUR_DOMAIN;
+       return 301 https://$host$request_uri;
+   }
+
+   server {
+       listen 443 ssl http2;
+       server_name YOUR_DOMAIN *.YOUR_DOMAIN;
+
+       ssl_certificate /etc/nginx/ssl/cloudflare.crt;
+       ssl_certificate_key /etc/nginx/ssl/cloudflare.key;
+
+       root /var/www/wordpress;
+       index index.php index.html;
+
+       client_max_body_size 64M;
+
+       # 以下は既存設定と同じ...
+   }
+   ```
+
+   ```bash
+   nginx -t && systemctl restart nginx
+   ```
+
+### 10.6 動作確認
+
+```bash
+# HTTPS でアクセス可能か確認
+curl -I https://YOUR_DOMAIN
+
+# ワイルドカードサブドメインも確認
+curl -I https://test.YOUR_DOMAIN
+```
+
+### 10.7 Cloudflare API 情報取得（環境変数用）
+
+1. **右上アイコン** → **My Profile** → **API Tokens**
+
+2. **Zone ID / Account ID:**
+   - ダッシュボードでドメインを選択
+   - 右サイドバーに表示される
+
+3. **API Token 作成:**
+   - 「Create Token」をクリック
+   - 「Edit zone DNS」テンプレートを使用
+   - Zone Resources: 対象ドメインを選択
+   - 「Continue to summary」→「Create Token」
+   - 表示されたトークンをメモ
+
+---
+
+## 11. 環境変数の設定
 
 全てのサービスのセットアップが完了したら、`.env` ファイルを編集します。
 
-### 9.1 エディタで .env を開く
+### 11.1 エディタで .env を開く
 
 ```bash
 # VS Code の場合
@@ -531,7 +938,7 @@ vim .env
 nano .env
 ```
 
-### 9.2 環境変数の入力
+### 11.2 環境変数の入力
 
 以下のテンプレートを参考に、取得した値を入力します。
 
@@ -594,15 +1001,21 @@ INNGEST_EVENT_KEY=""
 # ============================================
 # WordPress VPS (Phase 1)
 # ============================================
-# WordPress VPS を使用する場合のみ設定
-VPS_HOST=""
-VPS_SSH_PRIVATE_KEY=""
+# VPS接続情報（VPSセットアップ後に設定）
+VPS_HOST="xxx.xxx.xxx.xxx"
+VPS_SSH_PORT="22"
+VPS_SSH_PRIVATE_KEY="base64-encoded-private-key"
 VPS_SSH_USER="root"
+WP_PATH="/var/www/wordpress"
 WP_DOMAIN="argonote.app"
+WP_DEFAULT_THEME="developer"
 
-# WordPress API トークン暗号化キー（32バイトをBase64エンコード）
-# 生成コマンド: openssl rand -base64 32
-WP_TOKEN_ENCRYPTION_KEY=""
+# ============================================
+# Encryption (AES-256-GCM)
+# ============================================
+# API トークン暗号化キー（32バイトHex）
+# 生成コマンド: openssl rand -hex 32
+ENCRYPTION_KEY="64-char-hex-string"
 
 # ============================================
 # Cloudflare (CDN, DNS, R2) - オプション
@@ -627,21 +1040,26 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
 ```
 
-### 9.3 暗号化キーの生成（必要な場合）
+### 11.3 暗号化キーの生成（必要な場合）
 
-WordPress API トークン暗号化キーを生成:
+API トークン暗号化キー（AES-256-GCM用、32バイト=64文字Hex）を生成:
 
 ```bash
-openssl rand -base64 32
+openssl rand -hex 32
 ```
 
-出力された文字列を `WP_TOKEN_ENCRYPTION_KEY` に設定します。
+出力された64文字のHex文字列を `ENCRYPTION_KEY` に設定します。
+
+**例:**
+```
+a1b2c3d4e5f6...（64文字）
+```
 
 ---
 
-## 10. データベースセットアップ
+## 12. データベースセットアップ
 
-### 10.1 Prisma Client 生成
+### 12.1 Prisma Client 生成
 
 ```bash
 npx prisma generate
@@ -652,7 +1070,7 @@ npx prisma generate
 ✔ Generated Prisma Client (vX.X.X) to ./node_modules/@prisma/client in XXms
 ```
 
-### 10.2 データベースマイグレーション
+### 12.2 データベースマイグレーション
 
 ```bash
 npx prisma db push
@@ -663,7 +1081,7 @@ npx prisma db push
 🚀  Your database is now in sync with your Prisma schema. Done in XXs
 ```
 
-### 10.3 データベース確認（オプション）
+### 12.3 データベース確認（オプション）
 
 Prisma Studio でデータベースを確認:
 
@@ -675,9 +1093,9 @@ npx prisma studio
 
 ---
 
-## 11. ローカル開発環境の起動
+## 13. ローカル開発環境の起動
 
-### 11.1 ターミナル 1: Next.js 開発サーバー
+### 13.1 ターミナル 1: Next.js 開発サーバー
 
 ```bash
 npm run dev
@@ -693,7 +1111,7 @@ npm run dev
  ✓ Ready in XXs
 ```
 
-### 11.2 ターミナル 2: Inngest Dev Server
+### 13.2 ターミナル 2: Inngest Dev Server
 
 新しいターミナルウィンドウを開いて:
 
@@ -706,7 +1124,7 @@ npx inngest-cli dev
 Inngest Dev Server running at http://127.0.0.1:8288
 ```
 
-### 11.3 ターミナル 3: Stripe CLI（Webhook 転送）
+### 13.3 ターミナル 3: Stripe CLI（Webhook 転送）
 
 課金機能をテストする場合、新しいターミナルウィンドウを開いて:
 
@@ -714,7 +1132,7 @@ Inngest Dev Server running at http://127.0.0.1:8288
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-### 11.4 動作確認
+### 13.4 動作確認
 
 1. **ブラウザで開く:** http://localhost:3000
 
@@ -729,9 +1147,9 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ---
 
-## 12. 本番環境デプロイ
+## 14. 本番環境デプロイ
 
-### 12.1 Vercel へのデプロイ（推奨）
+### 14.1 Vercel へのデプロイ（推奨）
 
 1. **Vercel にサインイン:** https://vercel.com/
 
@@ -746,7 +1164,7 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 4. **デプロイ:**
    - 「Deploy」をクリック
 
-### 12.2 本番環境の設定更新
+### 14.2 本番環境の設定更新
 
 デプロイ後、以下を更新:
 
@@ -766,7 +1184,7 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ---
 
-## 13. トラブルシューティング
+## 15. トラブルシューティング
 
 ### よくあるエラーと解決方法
 

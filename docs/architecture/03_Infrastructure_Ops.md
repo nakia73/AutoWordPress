@@ -10,9 +10,10 @@
 
 ## 実行環境 (Hosting)
 
-**Platform:** DigitalOcean VPS (Droplets)
+**Platform:** Hetzner Cloud VPS
 
-- **理由:** コストパフォーマンスが最も良く、詳細な制御が可能。
+- **理由:** 圧倒的なコスト効率（DigitalOcean比79-84%削減）。Cloudflare CDNによりレイテンシをカバー。
+- **選定詳細:** [VPSプロバイダー選定](./11_VPS_Provider_Selection.md)
 
 ## アーキテクチャ: WordPress Multisite
 
@@ -29,8 +30,8 @@
 
 ### Phase 1: MVP (0-100 Users)
 
-- **Infrastructure:** Single VPS (DigitalOcean Droplet - $24/mo)
-- **Spec:** 2 vCPU / 4GB RAM / 80GB SSD
+- **Infrastructure:** Single VPS (Hetzner CX21 - €4.49/mo ≈ $5/mo)
+- **Spec:** 2 vCPU / 4GB RAM / 40GB SSD
 - **構成:**
   - Nginx + PHP-FPM + WordPress Multisite
   - MariaDB (同一サーバー)
@@ -38,16 +39,16 @@
 - **メリット:** 運用コスト最小、構成シンプル
 - **監視:**
   - UptimeRobot（サイト稼働、1分間隔）
-  - DigitalOcean Monitoring（CPU/メモリ/ディスク）
+  - Hetzner Cloud Console（CPU/メモリ/ディスク）
   - Sentry（エラー検知）
-- **バックアップ:** DigitalOcean Backups（週次自動）
+- **バックアップ:** Cloudflare R2 + cronスクリプト（日次自動）
 - **復旧目標:** 4時間以内（手動）
 
 ### Phase 2: Growth (100-500 Users)
 
 - **Strategy:** Vertical Scaling（スケールアップ）
-- **Infrastructure:** Single VPS (Resize -> $48 or $96/mo)
-- **Spec:** 4 vCPU / 8GB RAM / 160GB SSD
+- **Infrastructure:** Single VPS (Hetzner CX31/CX41 - €8.49〜€14.99/mo)
+- **Spec:** 4 vCPU / 8-16GB RAM / 80-160GB SSD
 - **追加対応:**
   - Redis Object Cache必須化
   - Cloudflare Full Cacheの活用

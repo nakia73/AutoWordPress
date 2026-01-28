@@ -36,7 +36,7 @@ WordPress Multisite用のデータベースとしてMariaDBを採用する理由
    - MariaDBはGPL v2で永続的にオープンソース保証
    - MySQL創設者が主導する活発な開発コミュニティ
 4. **業界標準**:
-   - DigitalOcean、Linode等の主要VPSで標準採用
+   - Hetzner、Linode等の主要VPSで標準採用
    - WordPressホスティング大手（WP Engine、Kinsta）もMariaDB採用
 
 **注:** MySQLでも動作するが、VPS環境ではMariaDBがデファクトスタンダード。
@@ -434,15 +434,22 @@ CREATE TABLE ab_tests (
 
 ## ステータス値一覧
 
-| テーブル | カラム | 値 |
-|---------|--------|-----|
-| users | subscription_status | trial, active, past_due, canceled |
-| sites | status | provisioning, active, suspended |
-| article_clusters | status | pending, generating, completed |
-| articles | status | draft, published, archived |
-| jobs | status | pending, processing, completed, failed |
-| custom_domains | status | pending, verifying, active, error |
-| custom_domains | ssl_status | none, issuing, active, expired |
+> **更新日:** 2026-01-27
+> **参照:** `app/prisma/schema.prisma`
+
+| テーブル | カラム | 値 | 備考 |
+|---------|--------|-----|------|
+| users | subscription_status | trial, active, past_due, canceled | |
+| sites | status | pending, provisioning, provision_failed, active, suspended, deleted | provision_failed追加 |
+| article_clusters | status | pending, generating, completed | |
+| articles | status | draft, generating, review, published, archived, failed | generating, review, failed追加 |
+| jobs | status | pending, processing, completed, failed | |
+| schedules | - | isActive (boolean) | active/inactiveはフラグ管理 |
+| schedule_jobs | status | pending, running, completed, failed | |
+| custom_domains | status | pending, verifying, active, error | |
+| custom_domains | ssl_status | pending, active, failed | 実装に合わせて変更 |
+
+**注意:** 上記はPrismaスキーマから抽出した実際の値です。ドキュメントと実装の乖離を防ぐため、スキーマ変更時は本表も更新してください。
 
 ## 外部サービス連携
 

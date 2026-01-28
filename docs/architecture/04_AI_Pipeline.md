@@ -156,7 +156,7 @@ Phase G          Phase F           Phase E
 1. **Planner（構成）**
    - Input: キーワード + Phase D競合分析
    - Output: H2/H3見出し構成、参照ソース
-   - **参照ソース明示**（ファクトチェック補助）
+   - **参照ソース明示**（ユーザーによる確認の補助）
 
 2. **Writer（執筆）**
    - Input: 構成案 + 参照情報
@@ -167,7 +167,7 @@ Phase G          Phase F           Phase E
 3. **Editor（推敲）**
    - Input: 初稿
    - Output: HTMLタグ整合性、導線自然さ、SEOチェック
-   - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
+   - **Fact Check:** ❌ 実装しない（設計決定 2026-01-27: ユーザー責任）
 
 4. **Illustrator（画像）** ※実装済み
    - Input: 記事タイトル・要約・セクション見出し
@@ -243,12 +243,13 @@ Phase G          Phase F           Phase E
     - **Input:** 初稿
     - **Tool:** LLM（設定に従う）
     - **Output:** HTMLタグの整合性チェック、プロダクト導線の自然さチェック
-    - **注意:** MVPではFact Check機能は未実装。参照ソースを明示し、MVP後にシステム側でFact Checkを実施する。
+    - **Fact Check:** ❌ 実装しない（設計決定 2026-01-27: ユーザー責任）
 
 6.  **Illustrator (画像):** ※実装済み
     - **Input:** 記事タイトル・要約・セクション見出し
-    - **Tool:** **NanoBanana Pro**（gemini-3-pro-image-preview）
+    - **Tool:** **kie.ai Nano Banana Pro**（主要）+ **Google公式API**（フォールバック）
     - **Output:** アイキャッチ画像 (URL) + セクション別画像（H2/H3見出し直後に挿入）
+    - **コスト最適化:** kie.ai使用で画像コスト33%削減（$0.09/image vs $0.134/image）
 
 ## LLMモデル戦略（確定）
 
@@ -401,19 +402,36 @@ const result = await articleGenerator.generate({
 
 ---
 
+### Fact Check（事実確認）について
+
+> **設計決定（2026-01-27）:** Fact Check機能は実装しない
+
+**理由:**
+- **内容の真実性・正確性の確認はユーザーの責任**とする
+- AI生成コンテンツの品質保証は、参照ソース明示によりユーザーが確認可能な状態を提供
+- システムの複雑性を削減し、責任の分離を明確化
+
+**ユーザーへの案内:**
+- 生成された記事には参照ソースが明示される
+- ユーザーは公開前に内容を確認・編集することが推奨される
+- 利用規約に「コンテンツの正確性確認はユーザー責任」を明記
+
+---
+
 ### 環境変数
 
 ```env
 # LLM設定
-LLM_MODEL=gemini-2.0-flash-exp
+LLM_MODEL=gemini/gemini-2.0-flash-exp
 LITELLM_API_KEY=...
 LITELLM_BASE_URL=...
 
 # Tavily検索
 TAVILY_API_KEY=tvly-...
 
-# NanoBanana Pro画像生成
-GOOGLE_API_KEY=...  # gemini-3-pro-image-preview用
+# 画像生成（kie.ai主要 + Google公式フォールバック）
+KIE_AI_API_KEY=...           # kie.ai Nano Banana Pro用（主要）
+GOOGLE_API_KEY=...           # Google公式API用（フォールバック）
 ```
 
 ---

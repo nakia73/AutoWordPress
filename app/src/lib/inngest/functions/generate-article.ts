@@ -1,17 +1,21 @@
 // Argo Note - Generate Article Function
 // Creates article content using AI
 // Phase 4: Integrated with image generation (NanoBanana Pro)
+// Note: Fact Check is user responsibility (design decision 2026-01-27)
 
 import { inngest } from '../client';
 import { prisma } from '@/lib/prisma/client';
 import { articleGenerator } from '@/lib/ai/article-generator';
-import { factChecker } from '@/lib/ai/fact-checker';
 import type { ArticleType } from '@/types';
 
 export const generateArticle = inngest.createFunction(
   {
     id: 'generate-article',
     retries: 3,
+    // Limit concurrent generations to manage LLM API rate limits
+    concurrency: {
+      limit: 5,
+    },
   },
   { event: 'article/generate' },
   async ({ event, step }) => {
@@ -67,22 +71,6 @@ export const generateArticle = inngest.createFunction(
       });
     });
 
-    // Run fact check on generated content (CI-001)
-    const factCheckResult = await step.run('fact-check-content', async () => {
-      console.log(`Fact checking article: ${articleId}`);
-
-      try {
-        return factChecker.quickCheck(generatedContent.content);
-      } catch (error) {
-        // Don't fail generation if fact check fails
-        console.error('Fact check failed:', error);
-        return { passed: true, issues: [] };
-      }
-    });
-
-    // Determine final status based on fact check
-    const finalStatus = factCheckResult.passed ? 'review' : 'review'; // Both go to review, but issues are logged
-
     // Save generated content
     await step.run('save-content', async () => {
       await prisma.article.update({
@@ -92,7 +80,7 @@ export const generateArticle = inngest.createFunction(
           content: generatedContent.content,
           metaDescription: generatedContent.meta_description,
           searchIntent: generatedContent.search_intent,
-          status: finalStatus,
+          status: 'review',
         },
       });
     });
@@ -116,7 +104,7 @@ export const generateArticle = inngest.createFunction(
 
     const generationTimeMs = Date.now() - startTime;
 
-    // Create generation log with fact check results and image info
+    // Create generation log with image info
     await step.run('create-generation-log', async () => {
       await prisma.articleGenerationLog.create({
         data: {
@@ -125,8 +113,6 @@ export const generateArticle = inngest.createFunction(
           inputTokens: 0, // Would be tracked by LLM client in production
           outputTokens: 0,
           generationTimeMs,
-          factCheckPassed: factCheckResult.passed,
-          factCheckIssues: factCheckResult.issues.length > 0 ? factCheckResult.issues : undefined,
         },
       });
 
@@ -157,8 +143,6 @@ export const generateArticle = inngest.createFunction(
     return {
       success: true,
       articleId,
-      factCheckPassed: factCheckResult.passed,
-      factCheckIssues: factCheckResult.issues,
       generationTimeMs,
       imagesGenerated: includeImages
         ? {

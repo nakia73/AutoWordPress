@@ -301,9 +301,8 @@ model ArticleGenerationLog {
   generationTimeMs Int?      @map("generation_time_ms")
   costUsd          Decimal?  @map("cost_usd") @db.Decimal(10, 6)
 
-  // Fact check results (CI-001)
-  factCheckPassed  Boolean?  @map("fact_check_passed")
-  factCheckIssues  Json?     @map("fact_check_issues") // String array of issues
+  // Note: factCheckPassed and factCheckIssues removed (design decision 2026-01-27)
+  // Fact Check is user responsibility, not system implemented
 
   createdAt        DateTime  @default(now()) @map("created_at")
 

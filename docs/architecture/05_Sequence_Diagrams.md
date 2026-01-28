@@ -35,7 +35,7 @@ sequenceDiagram
     participant LLM as Gemini 3.0 Pro (LiteLLM)
     participant Provisioner as WP Provisioning Worker
     participant Cloudflare as Cloudflare API
-    participant VPS as DigitalOcean VPS
+    participant VPS as Hetzner VPS
 
     User->>NextUI: サインアップ
     NextUI->>User: 分析方式を選択（A/B/C）

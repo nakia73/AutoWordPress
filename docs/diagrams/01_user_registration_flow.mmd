@@ -8,7 +8,7 @@ sequenceDiagram
     participant Provisioner as WP Provisioning Worker
     participant External as External APIs (Gemini/Firecrawl)
     participant Cloudflare as Cloudflare API
-    participant VPS as DigitalOcean VPS
+    participant VPS as Hetzner VPS
 
     User->>NextUI: サインアップ & プロダクトURL入力
     NextUI->>NextAPI: POST /api/products (URL, info)

@@ -10,6 +10,10 @@ export const analyzeProduct = inngest.createFunction(
   {
     id: 'analyze-product',
     retries: 3,
+    // Limit concurrent analyses to manage LLM API rate limits
+    concurrency: {
+      limit: 3,
+    },
   },
   { event: 'product/analyze' },
   async ({ event, step }) => {

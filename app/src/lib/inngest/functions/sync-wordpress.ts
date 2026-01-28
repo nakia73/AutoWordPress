@@ -10,6 +10,10 @@ export const syncWordPress = inngest.createFunction(
   {
     id: 'sync-wordpress',
     retries: 5,
+    // Limit concurrent WordPress operations per site
+    concurrency: {
+      limit: 10,
+    },
   },
   { event: 'wordpress/sync' },
   async ({ event, step }) => {

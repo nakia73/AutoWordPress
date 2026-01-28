@@ -1,8 +1,22 @@
 # Argo Note - モジュール間統合リスクレポート
 
+> ⚠️ **注意: 本レポートは統合されました**
+>
+> 本レポートの内容は [10_Comprehensive_Critical_Issues_Report.md](./10_Comprehensive_Critical_Issues_Report.md) に統合されました。
+> **新たな問題発見時は、統合レポート（10）に追記してください。**
+>
+> 本ファイルは参照用に保持されていますが、最新情報は統合レポートを参照してください。
+>
+> ---
+> **設計決定（2026-01-27）:** 本レポート内のFact Check関連の記述は廃止されました。
+> Fact Checkはシステムで実装せず、コンテンツの正確性確認はユーザーの責任とする設計決定がなされました。
+> 詳細: [CONCEPT_DECISIONS.md E8](../CONCEPT_DECISIONS.md)
+
+---
+
 > **目的:** 単体テスト→結合テストのフローで発生しうる不整合リスクの特定と対応方針
 > **作成日:** 2026年1月26日
-> **ステータス:** 要対応（実装前に解決必須）
+> **ステータス:** 統合済み（→ 10_Comprehensive_Critical_Issues_Report.md）
 
 ---
 
@@ -1234,7 +1248,7 @@ Phase 15 開始条件:
 
 | 項目 | コスト |
 |------|--------|
-| VPS (DigitalOcean) | $24/月 |
+| VPS (Hetzner) | €4.49/月 (~$5) |
 | ドメイン | $1/月 |
 | Vercel, Supabase, Inngest | 無料枠 |
 | 予備 | $75/月 |
@@ -1922,7 +1936,7 @@ API呼び出し:
 > 一気通貫でセットアップから運用まで
 
 **実装:**
-> 7-8個の外部サービスに依存（Firecrawl, Tavily, Gemini, DigitalOcean, Cloudflare, Supabase, Inngest等）
+> 7-8個の外部サービスに依存（Firecrawl, Tavily, Gemini, Hetzner, Cloudflare, Supabase, Inngest等）
 
 **問題:**
 - 1つのサービスが障害になれば全体が停止
@@ -2094,7 +2108,7 @@ URL入力 → プログレス表示 → 記事生成開始
 **MVP必須（Phase A〜G実装前提）:**
 - Supabase (Auth + DB)
 - Gemini 3.0 Pro (記事生成)
-- DigitalOcean VPS (WordPress)
+- Hetzner VPS (WordPress)
 - Cloudflare (DNS/CDN)
 - Inngest (スケジューリング)
 - Tavily API（調査/検索）
@@ -2298,7 +2312,7 @@ MVPでは Phase A〜G を実装対象とする。
   50ユーザー × $20/月 = $1,000/月
 
 支出:
-  VPS (DigitalOcean)     = $24/月
+  VPS (Hetzner)          = €4.49/月 (~$5)
   ドメイン               = $1/月
   Supabase (無料枠超過)  = $0-25/月
   Inngest (無料枠超過)   = $0-50/月

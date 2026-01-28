@@ -3,7 +3,8 @@
 > **作成日:** 2026年1月27日
 > **最終更新:** 2026年1月27日 ✅ **全タスク完了**
 > **目的:** Rapid-Note2フォルダ内の流用可能なコードをApp（Autoblog）に統合し、より良い実装を実現する
-> **参照:** CONCEPT_DECISIONS.md J8（既存資産の活用）
+> **参照:** [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) J8（既存資産の活用）
+> **完了レポート:** [RAPID_NOTE_INTEGRATION_SUMMARY.md](./RAPID_NOTE_INTEGRATION_SUMMARY.md)
 
 ---
 

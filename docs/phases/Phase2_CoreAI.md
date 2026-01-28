@@ -1,7 +1,7 @@
 # Phase 2: Core AI（AIコア機能）
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md) | [バックエンド仕様](../architecture/02_Backend_Database.md)
 > **前のフェーズ:** [← Phase 1: Infrastructure + Auth](./Phase1_Infrastructure.md) | **次のフェーズ:** [Phase 3: User Interface →](./Phase3_UserInterface.md)
 >
 > **実施週:** Week 2
@@ -77,7 +77,7 @@
 | **FAQ** | 検索ユーザーの直接的な疑問に回答（構造化データ付き） | 1,500〜2,500 |
 | **Glossary** | 業界用語の解説、専門用語でのSEO流入 | 1,000〜2,000 |
 
-**品質管理:** MVPではFact Check機能は未実装。参照ソースを明示し、ユーザーが内容を確認できる導線を用意する。Fact CheckはMVP後にシステム側で実施する。
+**品質管理:** 参照ソースを明示し、ユーザーが内容を確認・編集できる状態を提供。Fact Checkはユーザー責任（設計決定 2026-01-27）。
 
 ### Step 4: WordPress REST API 連携
 

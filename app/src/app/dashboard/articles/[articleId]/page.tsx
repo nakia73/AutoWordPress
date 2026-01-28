@@ -193,14 +193,6 @@ export default async function ArticleDetailPage({
                     </p>
                   </div>
                 )}
-                {latestLog.factCheckPassed !== null && (
-                  <div>
-                    <p className="text-sm text-gray-500">Fact Check</p>
-                    <Badge variant={latestLog.factCheckPassed ? 'success' : 'warning'}>
-                      {latestLog.factCheckPassed ? 'Passed' : 'Issues Found'}
-                    </Badge>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}

@@ -52,7 +52,7 @@
 
 実際にユーザーのブログが稼働する環境です。本サービスの心臓部です。
 
-- **Platform:** **DigitalOcean VPS**
+- **Platform:** **Hetzner VPS** → [選定理由](./11_VPS_Provider_Selection.md)
 - **Architecture:** **WordPress Multisite**（100サイトまで単一VPS）→ [詳細ガイド](./07_WordPress_Multisite_Guide.md)
 - **Network/Security:** Cloudflare（詳細下記）
 - **Storage:** **Cloudflare R2**（メディアファイル）
@@ -118,7 +118,7 @@ graph TD
         Inngest -->|Scraping| Scraper[Firecrawl/Jina Reader]
     end
 
-    subgraph "Infrastructure Layer (DigitalOcean VPS)"
+    subgraph "Infrastructure Layer (Hetzner VPS)"
         Inngest -->|Post Article| WP_Multi[WP Multisite Core]
         WP_Multi -->|Virtual| SiteA[Site A]
         WP_Multi -->|Virtual| SiteB[Site B]

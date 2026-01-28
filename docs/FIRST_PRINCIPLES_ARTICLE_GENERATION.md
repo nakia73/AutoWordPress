@@ -14,6 +14,10 @@
 4. [飛躍的アイデアの導出](#4-飛躍的アイデアの導出)
 5. [記事生成仕様への落とし込み](#5-記事生成仕様への落とし込み)
 6. [実装ロードマップ](#6-実装ロードマップ)
+7. [飛躍的アイデア - 実装仕様詳細](#7-飛躍的アイデア---実装仕様詳細)
+8. [コスト見積もりサマリー](#8-コスト見積もりサマリー)
+9. [実装優先度マトリクス](#9-実装優先度マトリクス)
+10. [次のアクション](#10-次のアクション)
 
 ---
 
@@ -557,3 +561,582 @@ MVP (Phase 6まで):
 ---
 
 *本ドキュメントはファーストプリンシプルシンキングに基づき、Argo Noteの設計思想を原子分解し、飛躍的アイデアへと再構築したものです。*
+
+---
+
+## 7. 飛躍的アイデア - 実装仕様詳細
+
+本セクションでは、セクション4で提案した5つの飛躍的アイデアについて、具体的な実装構成を定義する。
+
+### 7.1 Soul Injection System（魂の注入システム）
+
+#### 7.1.1 概要
+
+ユーザー固有のライティングスタイル（文体、トーン、語彙、価値観）を学習し、記事生成時に適用するシステム。
+
+#### 7.1.2 実装アプローチの比較
+
+| アプローチ | 精度 | コスト | 複雑度 | LoRA必要 | 推奨Phase |
+|-----------|------|--------|--------|----------|-----------|
+| **A: LoRA Fine-tuning** | 高 | 高 | 高 | ✅ 必要 | Phase 15+ |
+| **B: Few-shot Learning** | 中-高 | 低 | 低 | ❌ 不要 | **MVP推奨** |
+| **C: RAG + Style Examples** | 中 | 中 | 中 | ❌ 不要 | Phase 10 |
+| **D: Style Vector Embedding** | 高 | 中 | 中 | 条件付き | Phase 12 |
+
+#### 7.1.3 アプローチA: LoRA Fine-tuning（将来検討）
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    LoRA Fine-tuning Flow                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [オンボーディング]                                             │
+│  ユーザーがサンプルテキスト（10-50記事）をアップロード          │
+│       ↓                                                         │
+│  [前処理]                                                       │
+│  テキストをトレーニング形式に変換                               │
+│       ↓                                                         │
+│  [Fine-tuning]                                                  │
+│  Google Vertex AI でLoRAトレーニング実行                        │
+│  所要時間: 1-4時間                                              │
+│       ↓                                                         │
+│  [デプロイ]                                                     │
+│  カスタムエンドポイントとして展開                               │
+│       ↓                                                         │
+│  [記事生成]                                                     │
+│  ユーザー固有モデルで記事生成                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+API呼び出し:
+- Fine-tuning: Vertex AI Tuning API × 1回/ユーザー = $5-50/ユーザー
+- 推論: Tuned Model Endpoint × 記事生成ごと = 通常の1.2-1.5倍
+
+課題:
+- Google Gemini APIのLoRAサポートは限定的（2026年1月時点）
+- ユーザーごとのモデル管理コスト
+- トレーニングデータの品質依存
+
+結論: 現時点では非推奨。Phase 15以降でGemini LoRAが成熟したら再検討。
+```
+
+#### 7.1.4 アプローチB: Few-shot Learning（MVP推奨）
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Few-shot Learning Flow                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [オンボーディング時]                                           │
+│  Step 1: ユーザーが3-5個のサンプル文章を入力                    │
+│          - 過去のブログ記事                                     │
+│          - SNS投稿                                              │
+│          - 自己紹介文                                           │
+│       ↓                                                         │
+│  Step 2: スタイル特徴を抽出（LLM解析）                          │
+│          - トーン（フォーマル/カジュアル）                      │
+│          - 語彙レベル（専門的/平易）                            │
+│          - 一人称の使い方（私/僕/俺/なし）                      │
+│          - 特徴的なフレーズ                                     │
+│       ↓                                                         │
+│  Step 3: 「スタイルプロファイル」をDB保存                       │
+│                                                                 │
+│  [記事生成時]                                                   │
+│  Step 4: プロンプトにスタイルプロファイル + サンプル文を挿入    │
+│       ↓                                                         │
+│  Step 5: 通常の記事生成パイプラインを実行                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+API呼び出し:
+- スタイル解析: Gemini 3 Pro × 1回/ユーザー = ~$0.02
+- 記事生成（スタイル適用）: 通常 + $0.01/記事（プロンプト増加分）
+
+LoRA必要性: ❌ 不要
+```
+
+**データモデル:**
+```prisma
+model UserStyleProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+
+  tone            String   // "formal" | "casual" | "friendly" | "professional"
+  vocabularyLevel String   // "technical" | "general" | "simple"
+  firstPerson     String   // "私" | "僕" | "俺" | "none"
+  sentenceStyle   String   // "concise" | "detailed" | "conversational"
+  sampleTexts     String[] // 最大5つ
+  keyPhrases      String[] // 特徴的な表現
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+```
+
+#### 7.1.5 アプローチC: RAG + Style Examples（Phase 10）
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    RAG Style System Flow                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [セットアップ]                                                 │
+│  Step 1: ユーザーの過去記事をインポート                         │
+│  Step 2: 記事をチャンク化（段落単位）                           │
+│  Step 3: 各チャンクをEmbedding化（text-embedding-004）          │
+│  Step 4: Supabase pgvector に保存                               │
+│                                                                 │
+│  [記事生成時]                                                   │
+│  Step 5: 生成トピックから関連チャンクを検索                     │
+│  Step 6: 上位3-5チャンクをプロンプトに挿入                      │
+│  Step 7: 「このスタイルで書いて」と指示                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+API呼び出し:
+- Embedding生成: text-embedding-004 × チャンク数 = $0.00001/1K tokens
+- 類似検索: Supabase pgvector = 無料（DBクエリ）
+- 記事生成: 通常 + $0.02/記事
+
+LoRA必要性: ❌ 不要
+```
+
+#### 7.1.6 推奨ロードマップ
+
+| Phase | アプローチ | 内容 |
+|-------|-----------|------|
+| **MVP (Phase 6)** | B: Few-shot | 基本スタイル解析 + プロンプト拡張 |
+| **Phase 10** | C: RAG | 過去記事からの類似検索 |
+| **Phase 12** | D: Vector | スタイルベクトル（API対応次第） |
+| **Phase 15+** | A: LoRA | フルカスタマイズ（需要に応じて） |
+
+---
+
+### 7.2 Living Article（生きた記事）
+
+#### 7.2.1 概要
+
+公開済み記事を継続的に監視し、関連ニュースや情報の陳腐化を検知して自動更新提案を行うシステム。
+
+#### 7.2.2 実装フロー
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Living Article System                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [Cron Job: 毎日 or 毎週]                                       │
+│  Step 1: 監視対象記事の取得                                     │
+│          - status = 'published'                                 │
+│          - living_article_enabled = true                        │
+│          - last_checked_at < 7日前                              │
+│                         ↓                                       │
+│  Step 2: 各記事に対してTavily検索                               │
+│          - クエリ: 記事のメインキーワード + "最新"              │
+│          - 期間: 過去30日                                       │
+│          - 深度: basic（コスト削減）                            │
+│                         ↓                                       │
+│  Step 3: 関連性判定（LLM）                                      │
+│          - 検索結果と記事内容を比較                             │
+│          - 更新が必要かどうかを判定                             │
+│          - 更新箇所と内容を提案                                 │
+│                         ↓                                       │
+│  Step 4: 更新提案の保存                                         │
+│          - article_update_suggestions テーブルに保存            │
+│          - ダッシュボードに通知                                 │
+│                         ↓                                       │
+│  [ユーザーアクション]                                           │
+│  Step 5: ユーザーが更新を承認                                   │
+│          - 自動適用 or 手動編集                                 │
+│                         ↓                                       │
+│  Step 6: 記事を更新してWordPressに再公開                        │
+│          - 更新日時を記録                                       │
+│          - 変更履歴を保持                                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.2.3 データモデル
+
+```prisma
+model ArticleUpdateSuggestion {
+  id               String   @id @default(cuid())
+  articleId        String
+  article          Article  @relation(fields: [articleId], references: [id])
+
+  detectedAt       DateTime @default(now())
+  sourceUrl        String?
+  sourceTitle      String?
+
+  updateType       String   // "add_info" | "correct_outdated" | "add_example" | "update_stats"
+  affectedSection  String?
+  currentContent   String
+  suggestedContent String
+  reasoning        String
+
+  status           String   @default("pending") // "pending" | "approved" | "rejected" | "applied"
+  reviewedAt       DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ArticleRevision {
+  id           String   @id @default(cuid())
+  articleId    String
+  article      Article  @relation(fields: [articleId], references: [id])
+
+  version      Int
+  content      String
+  changeReason String
+
+  createdAt    DateTime @default(now())
+}
+```
+
+#### 7.2.4 API呼び出しとコスト
+
+| 処理 | API | 回数 | コスト |
+|------|-----|------|--------|
+| Tavily検索 | Tavily Search | 1回/記事/週 | $0.008 |
+| 関連性判定 | Gemini 3 Pro | 1回/記事/週 | ~$0.03 |
+| 更新生成（承認時） | Gemini 3 Pro | 1回/更新 | ~$0.10 |
+
+**月間コスト見積もり（100記事監視）:**
+```
+Tavily: 100記事 × 4週 × $0.008 = $3.20
+関連性判定: 100記事 × 4週 × $0.03 = $12.00
+更新生成（10%が更新）: 40記事 × $0.10 = $4.00
+────────────────────────────────────────
+合計: ~$19.20/月
+```
+
+#### 7.2.5 LoRA必要性
+
+❌ 不要（通常のLLM推論で十分）
+
+---
+
+### 7.3 Thought Map（思考マップ）
+
+#### 7.3.1 概要
+
+プロダクトの購買ファネルに沿ってピラー・クラスター構造を視覚化し、戦略的な記事展開を支援するシステム。
+
+#### 7.3.2 実装フロー
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Thought Map Generation                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [Step 1: プロダクト分析]                                       │
+│  入力: プロダクト名・説明、ターゲットユーザー、主要な価値提案   │
+│  LLM処理: プロダクトの核心的価値を抽出                          │
+│                         ↓                                       │
+│  [Step 2: 購買ファネル推論]                                     │
+│  LLM処理:                                                       │
+│  - TOFU（認知）: どんな課題を持つ人が検索するか                 │
+│  - MOFU（検討）: 具体的なユースケースは何か                     │
+│  - BOFU（決定）: 競合との比較ポイントは何か                     │
+│                         ↓                                       │
+│  [Step 3: キーワードクラスター生成]                             │
+│  LLM + Tavily処理:                                              │
+│  - 各ファネル段階で狙うべきキーワード                           │
+│  - Tavily検索で検索ボリューム・競合性を確認                     │
+│  - ピラーページとクラスター記事の関係を定義                     │
+│                         ↓                                       │
+│  [Step 4: 思考マップ構造化]                                     │
+│  出力: JSON形式のマップ構造                                     │
+│                         ↓                                       │
+│  [Step 5: UI可視化]                                             │
+│  React Flow / D3.js でインタラクティブなマップを表示            │
+│  - ノード: ピラー/クラスター記事                                │
+│  - エッジ: 内部リンク関係                                       │
+│  - 色分け: TOFU(青)/MOFU(緑)/BOFU(オレンジ)                     │
+│  - ステータス: 未生成/生成済み/公開済み                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.3.3 データモデル
+
+```prisma
+model ThoughtMap {
+  id              String   @id @default(cuid())
+  siteId          String
+  site            Site     @relation(fields: [siteId], references: [id])
+
+  pillarKeyword   String
+  pillarIntent    String
+  pillarArticleId String?
+
+  clusters        ThoughtMapCluster[]
+
+  version         Int      @default(1)
+  status          String   @default("draft") // "draft" | "approved" | "executing"
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ThoughtMapCluster {
+  id           String     @id @default(cuid())
+  thoughtMapId String
+  thoughtMap   ThoughtMap @relation(fields: [thoughtMapId], references: [id])
+
+  funnelStage  String     // "tofu" | "mofu" | "bofu"
+  keyword      String
+  intent       String
+  priority     Int        @default(0)
+
+  articleId    String?
+  article      Article?   @relation(fields: [articleId], references: [id])
+
+  createdAt    DateTime   @default(now())
+}
+```
+
+#### 7.3.4 API呼び出しとコスト
+
+| 処理 | API | 回数 | コスト |
+|------|-----|------|--------|
+| プロダクト分析 | Gemini 3 Pro | 1回/サイト | ~$0.05 |
+| ファネル推論 | Gemini 3 Pro | 1回/サイト | ~$0.08 |
+| キーワード検証 | Tavily Search | 10-20回/サイト | ~$0.16 |
+| 構造化 | Gemini 3 Pro | 1回/サイト | ~$0.03 |
+| **合計** | | | **~$0.32/サイト（初回のみ）** |
+
+#### 7.3.5 LoRA必要性
+
+❌ 不要
+
+---
+
+### 7.4 Vibe Writing（バイブライティング）
+
+#### 7.4.1 概要
+
+自然言語で「こんな記事が欲しい」と伝えるだけで、意図を解釈しSEO最適化された記事を生成する対話型システム。
+
+#### 7.4.2 実装フロー
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Vibe Writing Flow                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [ユーザー入力]                                                 │
+│  「私のタスク管理アプリについて、リモートワーカー向けに         │
+│   生産性向上の観点から書いてほしい。実際の使用シーンも入れて」  │
+│                         ↓                                       │
+│  [Step 1: 意図解析] (LLM)                                       │
+│  抽出情報:                                                      │
+│  - プロダクト: タスク管理アプリ                                 │
+│  - ターゲット: リモートワーカー                                 │
+│  - 切り口: 生産性向上                                           │
+│  - 要素: 使用シーン（体験談風）                                 │
+│  - 推定ファネル: MOFU（ユースケース記事）                       │
+│                         ↓                                       │
+│  [Step 2: キーワード候補生成] (LLM + Tavily)                    │
+│  候補:                                                          │
+│  1. 「リモートワーク タスク管理 コツ」                          │
+│  2. 「在宅勤務 生産性向上 ツール」                              │
+│  3. 「テレワーク 仕事効率化 アプリ」                            │
+│  Tavily検索で競合状況を確認                                     │
+│                         ↓                                       │
+│  [Step 3: ユーザー確認UI]                                       │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ 「以下の内容で記事を生成します。よろしいですか？」     │    │
+│  │                                                        │    │
+│  │ タイトル案:                                            │    │
+│  │ ✓ リモートワーカー必見！タスク管理で生産性を2倍に     │    │
+│  │ ○ 在宅勤務の生産性を劇的に上げるタスク管理術          │    │
+│  │                                                        │    │
+│  │ 構成案:                                                │    │
+│  │ 1. リモートワークの課題とは                            │    │
+│  │ 2. タスク管理が解決する3つの問題                       │    │
+│  │ 3. 実際の使用シーン：朝のルーティン                    │    │
+│  │ 4. 導入のステップ                                      │    │
+│  │                                                        │    │
+│  │ [生成する] [修正する]                                  │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                         ↓                                       │
+│  [Step 4: 記事生成パイプライン実行]                             │
+│  既存の6ステップパイプライン + Soul Injection                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.4.3 API呼び出しとコスト
+
+| 処理 | API | 回数 | コスト |
+|------|-----|------|--------|
+| 意図解析 | Gemini 3 Pro | 1回 | ~$0.02 |
+| キーワード生成 | Gemini 3 Pro | 1回 | ~$0.02 |
+| キーワード検証 | Tavily Search | 3回 | ~$0.024 |
+| タイトル・構成生成 | Gemini 3 Pro | 1回 | ~$0.03 |
+| **Vibe Writing解析合計** | | | **~$0.094** |
+| 記事生成（承認後） | 通常パイプライン | - | ~$0.91 |
+
+#### 7.4.4 LoRA必要性
+
+❌ 不要（プロンプトエンジニアリングで対応可能）
+
+---
+
+### 7.5 Transparency Advantage（透明性アドバンテージ）
+
+#### 7.5.1 概要
+
+AI生成を隠すのではなく、「AI + 人間」の協業プロセスを開示することで信頼を構築するシステム。
+
+#### 7.5.2 実装フロー
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Transparency Footer System                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [記事生成時]                                                   │
+│  生成プロセスのメタデータを記録:                                │
+│  - 情報収集: Tavily Search API                                  │
+│  - 記事生成: Gemini 3.0 Pro                                     │
+│  - 画像生成: NanoBanana Pro (kie.ai)                            │
+│  - 生成日時                                                     │
+│  - 監修者（ユーザー名）                                         │
+│                         ↓                                       │
+│  [WordPress投稿時]                                              │
+│  記事末尾にTransparency Footerを自動挿入:                       │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ 📝 この記事について                                    │    │
+│  │                                                        │    │
+│  │ 本記事は、AI技術と人間の専門知識を組み合わせて         │    │
+│  │ 作成されています。                                     │    │
+│  │                                                        │    │
+│  │ ・情報収集: AI (Tavily Search)                         │    │
+│  │ ・構成・執筆: AI (Google Gemini)                       │    │
+│  │ ・専門的監修: [ユーザー表示名]                         │    │
+│  │ ・最終更新: 2026年1月27日                              │    │
+│  │                                                        │    │
+│  │ AIが効率的に情報を収集・整理し、専門家が               │    │
+│  │ 正確性と独自の視点を追加しています。                   │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 7.5.3 ユーザー設定オプション
+
+```prisma
+model SiteSettings {
+  id                     String  @id @default(cuid())
+  siteId                 String  @unique
+  site                   Site    @relation(fields: [siteId], references: [id])
+
+  transparencyEnabled    Boolean @default(true)
+  transparencyStyle      String  @default("full") // "full" | "minimal" | "custom"
+  customTransparencyText String?
+  showModelNames         Boolean @default(true)
+  showSupervisorName     Boolean @default(true)
+}
+```
+
+#### 7.5.4 API呼び出しとコスト
+
+| 処理 | API | 回数 | コスト |
+|------|-----|------|--------|
+| フッター生成 | なし（テンプレート） | - | **$0** |
+
+#### 7.5.5 LoRA必要性
+
+❌ 不要
+
+---
+
+## 8. コスト見積もりサマリー
+
+### 8.1 機能別コスト（1記事あたり）
+
+| 機能 | 追加API呼び出し | 追加コスト | LoRA必要 |
+|------|----------------|-----------|----------|
+| **Soul Injection (Few-shot)** | LLM 1回 (初回解析) | +$0.01/記事 | ❌ |
+| **Living Article** | Tavily 1回 + LLM 1回 /週 | +$0.038/記事/週 | ❌ |
+| **Thought Map** | LLM 3回 + Tavily 15回 /サイト | ~$0.32/サイト (初回のみ) | ❌ |
+| **Vibe Writing** | LLM 3回 + Tavily 3回 | +$0.094/記事 | ❌ |
+| **Transparency Footer** | なし | $0 | ❌ |
+
+### 8.2 フェーズ別実装コスト
+
+| Phase | 機能 | 開発工数 | 月間運用コスト (100記事) |
+|-------|------|---------|-------------------------|
+| **MVP** | Transparency Footer | 2時間 | $0 |
+| **MVP** | Soul Injection (基本) | 8時間 | +$1/月 |
+| **Phase 10** | Living Article | 16時間 | +$19/月 |
+| **Phase 10** | Thought Map | 12時間 | +$3/月 (10サイト) |
+| **Phase 12** | Vibe Writing | 20時間 | +$9/月 |
+
+---
+
+## 9. 実装優先度マトリクス
+
+```
+                     高
+                      │
+        効果/ROI      │  ★ Transparency    ★ Vibe Writing
+                      │    Footer             (Phase 12)
+                      │
+                      │  ★ Soul Injection  ★ Living Article
+                      │    (Few-shot)         (Phase 10)
+                      │
+                      │                    ★ Thought Map
+                      │                      (Phase 10)
+                     低
+                      └────────────────────────────────────
+                       低                 実装難易度                高
+```
+
+### 9.1 推奨実装順序
+
+| 順位 | 機能 | Phase | 理由 |
+|------|------|-------|------|
+| 1 | Transparency Footer | MVP | 実装が簡単、差別化効果大 |
+| 2 | Soul Injection (Few-shot) | MVP | ユーザー体験向上、低コスト |
+| 3 | Thought Map | Phase 10 | 戦略性向上、初回のみのコスト |
+| 4 | Living Article | Phase 10 | 長期的SEO価値、継続コスト |
+| 5 | Vibe Writing | Phase 12 | UX革新、やや複雑 |
+
+---
+
+## 10. 次のアクション
+
+### 10.1 MVP（即座に実装可能）
+
+- [ ] Transparency Footer テンプレート実装
+- [ ] SiteSettings テーブル追加
+- [ ] WordPress投稿時のフッター挿入
+- [ ] UserStyleProfile テーブル追加
+- [ ] オンボーディング時のスタイル診断UI
+- [ ] 記事生成プロンプトへのスタイル適用
+
+### 10.2 Phase 10
+
+- [ ] ThoughtMap / ThoughtMapCluster テーブル追加
+- [ ] 思考マップ生成API
+- [ ] React Flow での可視化UI
+- [ ] Living Article Monitor Inngest Function
+- [ ] ArticleUpdateSuggestion テーブル追加
+- [ ] 更新提案ダッシュボードUI
+
+### 10.3 Phase 12
+
+- [ ] Vibe Writing 対話UI
+- [ ] 意図解析API
+- [ ] キーワード候補生成ロジック
+- [ ] 確認・修正フロー
+
+---
+
+*最終更新: 2026-01-27*

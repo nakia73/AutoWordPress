@@ -3,7 +3,7 @@
 // Phase 4: Integrated with image generation (NanoBanana Pro)
 
 import { llmClient, ARTICLE_PROMPTS } from './llm-client';
-import { tavilyClient, RESEARCH_QUERIES } from './tavily-client';
+import { tavilyClient } from './tavily-client';
 import { imageGenerator } from './image-generator';
 import { sectionImageService } from './section-image-service';
 import type { ArticleContent, ArticleType } from '@/types';
@@ -197,7 +197,7 @@ Content Summary: ${content.slice(0, 1000)}...
 
     // Step 3: Generate content
     console.log('Step 3: Generating article content...');
-    let content = await this.generateContent(outline, research, options);
+    const content = await this.generateContent(outline, research, options);
 
     // Step 4: Generate meta description
     console.log('Step 4: Generating meta description...');
