@@ -159,121 +159,34 @@ describe('ArticleInputHandler', () => {
     });
   });
 
-  describe('normalize() - article_url mode', () => {
-    it('should analyze reference article structure', async () => {
-      const { webScraper } = await import('../web-scraper');
-      const { llmClient } = await import('../llm-client');
-
-      vi.mocked(webScraper.scrapeUrl).mockResolvedValueOnce({
-        url: 'https://blog.example.com/article',
-        title: 'How to Manage Tasks Effectively',
-        content: '# How to Manage Tasks\n\n## Introduction\n\nContent here...\n\n## Method 1\n\nMore content...',
-        success: true,
-      });
-
-      vi.mocked(llmClient.jsonPrompt).mockResolvedValueOnce({
-        topic: 'Task management',
-        style: 'informative, professional',
-        inferredProduct: 'TaskFlow',
-        inferredDescription: 'A task management solution',
-      });
-
-      vi.mocked(llmClient.prompt).mockResolvedValueOnce('task management tips');
-
-      const input: ArticleInput = {
-        mode: 'article_url',
-        url: 'https://blog.example.com/article',
-        language: 'en',
-      };
-
-      const result = await handler.normalize(input);
-
-      expect(result.referenceArticle).toBeDefined();
-      expect(result.referenceArticle?.title).toBe('How to Manage Tasks Effectively');
-      expect(result.referenceArticle?.structure).toContain('How to Manage Tasks');
-      expect(result.inputMode).toBe('article_url');
-    });
-
-    it('should use provided product info over inferred', async () => {
-      const { webScraper } = await import('../web-scraper');
-      const { llmClient } = await import('../llm-client');
-
-      vi.mocked(webScraper.scrapeUrl).mockResolvedValueOnce({
-        url: 'https://blog.example.com',
-        title: 'Article',
-        content: '# Title\n\nContent',
-        success: true,
-      });
-
-      vi.mocked(llmClient.jsonPrompt).mockResolvedValueOnce({
-        topic: 'Topic',
-        style: 'casual',
-        inferredProduct: 'InferredProduct',
-        inferredDescription: 'Inferred description',
-      });
-
-      vi.mocked(llmClient.prompt).mockResolvedValueOnce('keyword');
-
-      const input: ArticleInput = {
-        mode: 'article_url',
-        url: 'https://blog.example.com',
-        productName: 'MyProduct',
-        productDescription: 'My description',
-      };
-
-      const result = await handler.normalize(input);
-
-      expect(result.productName).toBe('MyProduct');
-      expect(result.productDescription).toBe('My description');
-    });
-  });
-
   describe('normalize() - hybrid mode', () => {
-    it('should combine site and article data', async () => {
+    it('should combine site data with user input', async () => {
       const { webScraper } = await import('../web-scraper');
       const { llmClient } = await import('../llm-client');
 
-      // First call for site URL
-      vi.mocked(webScraper.scrapeUrl)
-        .mockResolvedValueOnce({
-          url: 'https://product.example.com',
-          title: 'Product Page',
-          content: 'Product content...',
-          success: true,
-        })
-        // Second call for article URL
-        .mockResolvedValueOnce({
-          url: 'https://blog.example.com',
-          title: 'Reference Article',
-          content: '# Reference\n\n## Section 1\n\nContent',
-          success: true,
-        });
+      vi.mocked(webScraper.scrapeUrl).mockResolvedValueOnce({
+        url: 'https://product.example.com',
+        title: 'Product Page',
+        content: 'Product content...',
+        success: true,
+      });
 
-      // Extract product info
-      vi.mocked(llmClient.jsonPrompt)
-        .mockResolvedValueOnce({
-          name: 'ExtractedProduct',
-          description: 'Extracted description',
-        })
-        // Analyze article
-        .mockResolvedValueOnce({
-          topic: 'Topic',
-          style: 'formal',
-        });
+      vi.mocked(llmClient.jsonPrompt).mockResolvedValueOnce({
+        name: 'ExtractedProduct',
+        description: 'Extracted description',
+      });
 
       vi.mocked(llmClient.prompt).mockResolvedValueOnce('generated keyword');
 
       const input: ArticleInput = {
         mode: 'hybrid',
         siteUrl: 'https://product.example.com',
-        articleUrl: 'https://blog.example.com',
       };
 
       const result = await handler.normalize(input);
 
       expect(result.siteContent).toBeDefined();
-      expect(result.referenceArticle).toBeDefined();
-      expect(result.sourceUrls).toHaveLength(2);
+      expect(result.sourceUrls).toHaveLength(1);
       expect(result.inputMode).toBe('hybrid');
     });
 

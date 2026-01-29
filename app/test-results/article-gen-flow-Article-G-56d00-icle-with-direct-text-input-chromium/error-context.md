@@ -1,0 +1,65 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - heading "Argo Note - Article Generator (Dev)" [level=1] [ref=e5]
+      - paragraph [ref=e6]: スタンドアロン記事生成テスト用UI - 4入力モード対応
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - heading "入力" [level=2] [ref=e9]
+        - generic [ref=e10]:
+          - generic [ref=e11]: 入力モード
+          - generic [ref=e12]:
+            - button "テキスト入力 直接情報を入力" [ref=e13]:
+              - generic [ref=e14]: テキスト入力
+              - generic [ref=e15]: 直接情報を入力
+            - button "サイトURL LPから自動抽出" [ref=e16]:
+              - generic [ref=e17]: サイトURL
+              - generic [ref=e18]: LPから自動抽出
+            - button "参考記事URL 構造を模倣" [ref=e19]:
+              - generic [ref=e20]: 参考記事URL
+              - generic [ref=e21]: 構造を模倣
+            - button "ハイブリッド 複数ソース組合せ" [ref=e22]:
+              - generic [ref=e23]: ハイブリッド
+              - generic [ref=e24]: 複数ソース組合せ
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: ターゲットキーワード *
+            - 'textbox "例: タスク管理ツール 比較" [ref=e28]': TypeScript 入門
+          - generic [ref=e29]:
+            - generic [ref=e30]: プロダクト名
+            - 'textbox "例: TaskFlow" [ref=e31]': Argo Note
+          - generic [ref=e32]:
+            - generic [ref=e33]: プロダクト説明
+            - 'textbox "例: チーム向けタスク管理SaaSツール" [ref=e34]': AI記事生成プラットフォーム
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: 記事タイプ
+              - combobox [ref=e38]:
+                - option "Article (3000-4000字)"
+                - option "FAQ (1500-2500字)" [selected]
+                - option "Glossary (1000-2000字)"
+            - generic [ref=e39]:
+              - generic [ref=e40]: 言語
+              - combobox [ref=e41]:
+                - option "日本語" [selected]
+                - option "English"
+          - generic [ref=e42]:
+            - checkbox "画像を生成する（時間がかかります）" [ref=e43]
+            - generic [ref=e44]: 画像を生成する（時間がかかります）
+          - button "生成中..." [disabled] [ref=e45]:
+            - generic [ref=e46]:
+              - img [ref=e47]
+              - text: 生成中...
+      - generic [ref=e50]:
+        - heading "出力" [level=2] [ref=e52]
+        - generic [ref=e53]:
+          - img [ref=e54]
+          - paragraph [ref=e57]: 記事を生成中...
+          - paragraph [ref=e58]: これには数分かかることがあります
+  - button "Open Next.js Dev Tools" [ref=e64] [cursor=pointer]:
+    - img [ref=e65]
+  - alert [ref=e68]
+```

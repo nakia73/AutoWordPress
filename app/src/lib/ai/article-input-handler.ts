@@ -1,29 +1,23 @@
 // Argo Note - Article Input Handler
 // Unified handler for multiple input patterns
-// Supports: Site URL, Article URL to mimic, Text input, Hybrid
+// Supports: Site URL, Text input, Hybrid
+//
+// Note: Trace機能（Writing Style Trace）は Phase 10 で正式実装予定
+// 専用管理画面（/settings/style-traces）でスタイルプロファイルを事前登録する方式
 
 import { webScraper, type ScrapedContent } from './web-scraper';
 import { llmClient } from './llm-client';
-import { tavilyClient } from './tavily-client';
 
 // ============================================
 // Input Types
 // ============================================
 
-export type InputMode = 'site_url' | 'article_url' | 'text' | 'hybrid';
+export type InputMode = 'site_url' | 'text' | 'hybrid';
 
 export type SiteUrlInput = {
   mode: 'site_url';
   url: string;
   targetKeyword?: string;
-  language?: 'ja' | 'en';
-};
-
-export type ArticleUrlInput = {
-  mode: 'article_url';
-  url: string;
-  productName?: string;
-  productDescription?: string;
   language?: 'ja' | 'en';
 };
 
@@ -39,7 +33,6 @@ export type TextInput = {
 export type HybridInput = {
   mode: 'hybrid';
   siteUrl?: string;
-  articleUrl?: string;
   productName?: string;
   productDescription?: string;
   targetKeyword?: string;
@@ -47,7 +40,7 @@ export type HybridInput = {
   language?: 'ja' | 'en';
 };
 
-export type ArticleInput = SiteUrlInput | ArticleUrlInput | TextInput | HybridInput;
+export type ArticleInput = SiteUrlInput | TextInput | HybridInput;
 
 // ============================================
 // Normalized Output
@@ -62,12 +55,6 @@ export type NormalizedInput = {
 
   // Optional enrichment
   siteContent?: string;
-  referenceArticle?: {
-    title: string;
-    structure: string[];
-    style: string;
-    wordCount: number;
-  };
   additionalContext?: string;
 
   // Metadata
@@ -87,8 +74,6 @@ export class ArticleInputHandler {
     switch (input.mode) {
       case 'site_url':
         return this.normalizeSiteUrl(input);
-      case 'article_url':
-        return this.normalizeArticleUrl(input);
       case 'text':
         return this.normalizeText(input);
       case 'hybrid':
@@ -133,50 +118,7 @@ export class ArticleInputHandler {
   }
 
   /**
-   * Mode 2: Article URL - Analyze reference article for style/structure
-   */
-  private async normalizeArticleUrl(input: ArticleUrlInput): Promise<NormalizedInput> {
-    console.log(`[InputHandler] Processing article URL: ${input.url}`);
-
-    // Scrape the reference article
-    const scraped = await webScraper.scrapeUrl(input.url);
-
-    if (!scraped.success) {
-      throw new Error(`Failed to scrape article: ${scraped.error}`);
-    }
-
-    // Analyze article structure
-    const analysis = await this.analyzeArticle(scraped);
-
-    // Use provided product info or extract from article
-    const productName = input.productName || analysis.inferredProduct || 'Product';
-    const productDescription = input.productDescription || analysis.inferredDescription || '';
-
-    // Generate target keyword based on article topic
-    const targetKeyword = await this.generateKeyword(
-      productName,
-      analysis.topic,
-      input.language || 'ja'
-    );
-
-    return {
-      productName,
-      productDescription,
-      targetKeyword,
-      language: input.language || 'ja',
-      referenceArticle: {
-        title: scraped.title,
-        structure: analysis.headings,
-        style: analysis.style,
-        wordCount: analysis.wordCount,
-      },
-      inputMode: 'article_url',
-      sourceUrls: [input.url],
-    };
-  }
-
-  /**
-   * Mode 3: Text Input - Direct user-provided information
+   * Mode 2: Text Input - Direct user-provided information
    */
   private async normalizeText(input: TextInput): Promise<NormalizedInput> {
     console.log(`[InputHandler] Processing text input for: ${input.productName}`);
@@ -193,14 +135,13 @@ export class ArticleInputHandler {
   }
 
   /**
-   * Mode 4: Hybrid - Combine multiple sources
+   * Mode 3: Hybrid - Combine site URL with text input
    */
   private async normalizeHybrid(input: HybridInput): Promise<NormalizedInput> {
     console.log('[InputHandler] Processing hybrid input');
 
     const sourceUrls: string[] = [];
     let siteContent: string | undefined;
-    let referenceArticle: NormalizedInput['referenceArticle'] | undefined;
     let extractedProduct: { name: string; description: string } | undefined;
 
     // Process site URL if provided
@@ -210,21 +151,6 @@ export class ArticleInputHandler {
         siteContent = scraped.content.slice(0, 5000);
         extractedProduct = await this.extractProductInfo(scraped);
         sourceUrls.push(input.siteUrl);
-      }
-    }
-
-    // Process article URL if provided
-    if (input.articleUrl) {
-      const scraped = await webScraper.scrapeUrl(input.articleUrl);
-      if (scraped.success) {
-        const analysis = await this.analyzeArticle(scraped);
-        referenceArticle = {
-          title: scraped.title,
-          structure: analysis.headings,
-          style: analysis.style,
-          wordCount: analysis.wordCount,
-        };
-        sourceUrls.push(input.articleUrl);
       }
     }
 
@@ -245,7 +171,6 @@ export class ArticleInputHandler {
       targetKeyword,
       language: input.language || 'ja',
       siteContent,
-      referenceArticle,
       additionalContext: input.additionalContext,
       inputMode: 'hybrid',
       sourceUrls,
@@ -290,70 +215,6 @@ ${scraped.content.slice(0, 3000)}
       return {
         name: scraped.title || 'Unknown Product',
         description: scraped.content.slice(0, 200),
-      };
-    }
-  }
-
-  /**
-   * Analyze article structure and style
-   */
-  private async analyzeArticle(scraped: ScrapedContent): Promise<{
-    topic: string;
-    headings: string[];
-    style: string;
-    wordCount: number;
-    inferredProduct?: string;
-    inferredDescription?: string;
-  }> {
-    // Extract headings from markdown content
-    const headingMatches = scraped.content.match(/^#{1,3}\s+.+$/gm) || [];
-    const headings = headingMatches.map((h) => h.replace(/^#+\s+/, ''));
-
-    // Calculate word count
-    const wordCount = scraped.content.split(/\s+/).length;
-
-    const systemPrompt = `You are a content analyst.
-Analyze the article and extract:
-1. Main topic
-2. Writing style (formal/casual, technical/accessible, etc.)
-3. If a product is mentioned, what is it?
-
-Return as JSON:
-{
-  "topic": "Main topic of the article",
-  "style": "Brief description of writing style",
-  "inferredProduct": "Product name if mentioned, or null",
-  "inferredDescription": "Product description if inferable, or null"
-}`;
-
-    const userPrompt = `
-Analyze this article:
-
-Title: ${scraped.title}
-Content:
-${scraped.content.slice(0, 3000)}
-`;
-
-    try {
-      const analysis = await llmClient.jsonPrompt<{
-        topic: string;
-        style: string;
-        inferredProduct?: string;
-        inferredDescription?: string;
-      }>(systemPrompt, userPrompt);
-
-      return {
-        ...analysis,
-        headings,
-        wordCount,
-      };
-    } catch (error) {
-      console.warn('[InputHandler] Failed to analyze article:', error);
-      return {
-        topic: scraped.title || 'Unknown',
-        headings,
-        style: 'standard',
-        wordCount,
       };
     }
   }

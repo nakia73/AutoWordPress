@@ -17,8 +17,9 @@ export const config = {
      * - favicon.ico (favicon file)
      * - api/inngest (Inngest webhook)
      * - api/stripe/webhook (Stripe webhook)
+     * - dev/ (development pages - no auth required)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/inngest|api/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/inngest|api/stripe/webhook|dev/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

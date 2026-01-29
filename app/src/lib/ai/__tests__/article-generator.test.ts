@@ -12,7 +12,8 @@ import type { ArticleContent, ArticleType } from '@/types';
 // Mock the dependencies
 vi.mock('../tavily-client', () => ({
   tavilyClient: {
-    researchForArticle: vi.fn().mockResolvedValue(`
+    researchForArticle: vi.fn().mockResolvedValue({
+      context: `
 === TAVILY AI SUMMARY ===
 [NEWS] Recent developments in task management tools show increased adoption.
 [SNS] Users on X/Twitter are discussing productivity apps.
@@ -24,7 +25,9 @@ URL: https://example.com/news
 Relevance: 0.85
 Content: Companies are enhancing their task management tools with AI features.
 ---
-    `),
+      `,
+      apiCallCount: 3,
+    }),
   },
 }));
 
@@ -55,6 +58,10 @@ vi.mock('../llm-client', () => ({
     `),
     prompt: vi.fn().mockResolvedValue('Meta description for SEO optimization under 160 characters.'),
   },
+  LLMClient: vi.fn(),
+}));
+
+vi.mock('../prompts', () => ({
   ARTICLE_PROMPTS: {
     OUTLINE: 'Generate outline...',
     CONTENT: 'Write content...',
@@ -177,8 +184,11 @@ describe('ArticleGenerator', () => {
       const result = await generator.research('task management', 'en');
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe('string');
-      expect(result).toContain('TAVILY');
+      expect(typeof result).toBe('object');
+      expect(result.context).toBeDefined();
+      expect(typeof result.context).toBe('string');
+      expect(result.context).toContain('TAVILY');
+      expect(result.apiCallCount).toBeGreaterThanOrEqual(1);
     });
   });
 

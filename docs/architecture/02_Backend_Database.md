@@ -287,7 +287,8 @@ export type KeywordCandidate = {
 };
 
 // 入力パターン
-export type InputMode = 'site_url' | 'article_url' | 'text' | 'hybrid';
+// Note: Trace機能（参考記事スタイル模倣）は Phase 10 で実装予定（アセット管理方式）
+export type InputMode = 'site_url' | 'text' | 'hybrid';
 
 export type NormalizedInput = {
   productName: string;
@@ -295,12 +296,6 @@ export type NormalizedInput = {
   targetKeyword: string;
   language: 'ja' | 'en';
   siteContent?: string;
-  referenceArticle?: {
-    title: string;
-    structure: string[];
-    style: string;
-    wordCount: number;
-  };
   additionalContext?: string;
   inputMode: InputMode;
   sourceUrls: string[];

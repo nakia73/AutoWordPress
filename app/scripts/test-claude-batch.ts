@@ -13,8 +13,7 @@
 import 'dotenv/config';
 import {
   ClaudeBatchClient,
-  createArticleBatchRequests,
-  mapBatchResultsToArticles,
+  executeSingleRequest,
   type BatchRequest,
   type BatchStatus,
 } from '../src/lib/ai/claude-batch-client';
@@ -154,22 +153,30 @@ async function main() {
     console.log();
 
     // ============================================
-    // Test 6: 記事生成ヘルパーのテスト
+    // Test 6: executeSingleRequest ヘルパーのテスト
     // ============================================
-    console.log('6. Testing article batch helpers...');
+    console.log('6. Testing executeSingleRequest helper...');
 
-    const articleRequests = createArticleBatchRequests([
+    const singleResult = await executeSingleRequest(
+      client,
+      'You are a helpful assistant. Keep responses brief.',
+      [{ role: 'user', content: 'Say "Single request helper works!" and nothing else.' }],
       {
-        articleId: 'article-test-001',
-        keyword: 'React Hooks',
-        productName: 'Test Product',
-        language: 'ja',
-      },
-    ]);
+        model: 'claude-haiku-4-5',
+        maxTokens: 100,
+        pollIntervalMs: 5000,
+        maxWaitMs: 3 * 60 * 1000,
+        onProgress: (s) => {
+          console.log(`   ... ${s.processingStatus}: ${s.requestCounts.succeeded} succeeded`);
+        },
+      }
+    );
 
-    console.log(`   ✅ Created ${articleRequests.length} article request(s)`);
-    console.log(`   Custom ID: ${articleRequests[0].customId}`);
-    console.log(`   Model: ${articleRequests[0].model || 'default'}`);
+    console.log(`   ✅ Single request completed`);
+    console.log(`   Content: "${singleResult.content.trim()}"`);
+    if (singleResult.usage) {
+      console.log(`   Tokens: ${singleResult.usage.inputTokens} in, ${singleResult.usage.outputTokens} out`);
+    }
     console.log();
 
     // ============================================

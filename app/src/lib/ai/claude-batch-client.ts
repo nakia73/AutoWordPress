@@ -1,11 +1,30 @@
-// Argo Note - Claude Batch API Client
-// Message Batches APIを使用した非同期バッチ処理
-//
-// 重要: Claude APIは常にBatch APIを使用（ストリーミング/同期API不使用）
-// - 1記事の生成でもBatch APIを使用し、50%のコスト削減を実現
-// - リアルタイム応答は不要なため、処理時間より価格を優先
-//
-// 仕様: docs/architecture/05_Claude_Batch_API.md
+/**
+ * Claude Batch API Client
+ * ========================
+ * Anthropic Message Batches APIの独立したクライアントモジュール
+ *
+ * 責務:
+ * - Batch APIのライフサイクル管理（作成、監視、結果取得、キャンセル）
+ * - 汎用的なバッチ処理インターフェースの提供
+ *
+ * 特徴:
+ * - 50%コスト削減（Batch API利用による）
+ * - 最大100,000リクエスト/バッチ
+ * - 24時間以内に処理完了
+ *
+ * 依存:
+ * - @anthropic-ai/sdk のみ（外部依存最小）
+ *
+ * 使用例:
+ * ```typescript
+ * const client = new ClaudeBatchClient();
+ * const batch = await client.createBatch([{ customId: 'req-1', messages: [...] }]);
+ * await client.waitForCompletion(batch.batchId);
+ * const results = await client.getAllResults(batch.batchId);
+ * ```
+ *
+ * 仕様: docs/architecture/05_Claude_Batch_API.md
+ */
 
 import Anthropic from '@anthropic-ai/sdk';
 import type {
@@ -299,11 +318,12 @@ export class ClaudeBatchClient {
     }
 
     if (result.result.type === 'errored' && result.result.error) {
+      const errorObj = result.result.error as unknown as { type: string; message: string };
       return {
         ...baseResult,
         error: {
-          type: result.result.error.type,
-          message: result.result.error.message,
+          type: errorObj.type,
+          message: errorObj.message || 'Unknown error',
         },
       };
     }
@@ -317,85 +337,74 @@ export class ClaudeBatchClient {
 }
 
 // ============================================
-// 記事生成用ヘルパー
+// 便利メソッド（単一リクエスト用）
 // ============================================
 
-export interface ArticleBatchRequest {
-  articleId: string;
-  keyword: string;
-  productName?: string;
-  productDescription?: string;
-  language?: 'ja' | 'en';
+export interface SingleRequestOptions {
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+  pollIntervalMs?: number;
+  maxWaitMs?: number;
+  onProgress?: (status: BatchStatus) => void;
 }
 
-export interface ArticleBatchResult {
-  articleId: string;
-  success: boolean;
-  content?: string;
-  error?: string;
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
+/**
+ * 単一リクエストをバッチ経由で実行し、結果を返す
+ * LLMClientからの呼び出しを簡略化するヘルパー
+ */
+export async function executeSingleRequest(
+  client: ClaudeBatchClient,
+  systemPrompt: string | undefined,
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  options?: SingleRequestOptions
+): Promise<{ content: string; usage?: { inputTokens: number; outputTokens: number } }> {
+  const customId = `single-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const batchRequest: BatchRequest = {
+    customId,
+    model: options?.model,
+    maxTokens: options?.maxTokens ?? 4096,
+    system: systemPrompt,
+    messages,
+    temperature: options?.temperature ?? 0.7,
+  };
+
+  // バッチを作成
+  const batch = await client.createBatch([batchRequest]);
+
+  // 完了まで待機
+  await client.waitForCompletion(batch.batchId, {
+    pollIntervalMs: options?.pollIntervalMs ?? 5000,
+    maxWaitMs: options?.maxWaitMs ?? 10 * 60 * 1000,
+    onProgress: options?.onProgress,
+  });
+
+  // 結果を取得
+  const results = await client.getAllResults(batch.batchId);
+  const result = results.find((r) => r.customId === customId);
+
+  if (!result) {
+    throw new Error(`Batch result not found for request ${customId}`);
+  }
+
+  if (result.type !== 'succeeded') {
+    throw new Error(`Batch request failed: ${result.error?.message || result.type}`);
+  }
+
+  if (!result.content) {
+    throw new Error('Batch result has no content');
+  }
+
+  return {
+    content: result.content,
+    usage: result.usage,
   };
 }
 
-/**
- * 記事生成用のバッチリクエストを作成
- */
-export function createArticleBatchRequests(
-  articles: ArticleBatchRequest[],
-  options?: { model?: string; maxTokens?: number }
-): BatchRequest[] {
-  const systemPrompt = `あなたはSEO最適化された高品質な記事を生成する専門家です。
-以下の指示に従って記事を生成してください：
-- 読者にとって価値のある情報を提供する
-- 自然なキーワード配置（キーワードスタッフィングを避ける）
-- 明確な見出し構造（H2, H3）を使用
-- 具体例やデータを含める
-- 読みやすい段落構成`;
-
-  return articles.map((article) => ({
-    customId: article.articleId,
-    model: options?.model,
-    maxTokens: options?.maxTokens || 4096,
-    system: systemPrompt,
-    messages: [
-      {
-        role: 'user' as const,
-        content: `以下の条件で記事を生成してください：
-
-キーワード: ${article.keyword}
-${article.productName ? `商品名: ${article.productName}` : ''}
-${article.productDescription ? `商品説明: ${article.productDescription}` : ''}
-言語: ${article.language === 'en' ? '英語' : '日本語'}
-
-記事を生成してください。HTMLフォーマットで出力し、<article>タグで囲んでください。`,
-      },
-    ],
-  }));
-}
-
-/**
- * バッチ結果を記事結果に変換
- */
-export function mapBatchResultsToArticles(
-  results: BatchResultItem[]
-): ArticleBatchResult[] {
-  return results.map((result) => ({
-    articleId: result.customId,
-    success: result.type === 'succeeded',
-    content: result.content,
-    error:
-      result.type === 'errored'
-        ? result.error?.message
-        : result.type === 'expired'
-          ? 'Request expired (24h timeout)'
-          : result.type === 'canceled'
-            ? 'Request was canceled'
-            : undefined,
-    usage: result.usage,
-  }));
-}
+// ============================================
+// デフォルトインスタンス
+// ============================================
 
 // デフォルトインスタンス（API キーが設定されている場合）
 let defaultClient: ClaudeBatchClient | null = null;

@@ -264,12 +264,32 @@ interface BatchResult {
 
 ```
 lib/ai/
-├── llm-client.ts           # Gemini用（同期API）
-├── claude-batch-client.ts  # Claude用（Batch API専用）
+├── llm-client.ts           # マルチプロバイダーLLM抽象化層
+├── claude-batch-client.ts  # Claude Batch API専用クライアント
+├── claude-client.ts        # Claude 同期API + 共通インターフェース（2026-01-29追加）
 └── article-generator.ts    # 記事生成パイプライン
 ```
 
-**注意:** Claude APIへのアクセスはすべて`claude-batch-client.ts`を経由します。同期APIやストリーミングAPIは使用しません。
+**Claude APIモジュール構成:**
+
+| モジュール | 用途 | コスト |
+|-----------|------|--------|
+| `claude-batch-client.ts` | バックグラウンドジョブ（デフォルト） | **50%割引** |
+| `claude-client.ts` | Web UIからのリアルタイムリクエスト | 標準価格 |
+
+**共通インターフェース（`ClaudeProvider`）:**
+
+```typescript
+// Batch APIとSync APIで同じインターフェースを使用可能
+const provider: ClaudeProvider = createClaudeProvider({
+  type: 'batch' // or 'sync' or 'auto'
+});
+const result = await provider.complete(request);
+```
+
+**切り替え方法:**
+- 環境変数 `CLAUDE_API_MODE=sync` で同期APIを使用
+- 環境変数 `CLAUDE_API_MODE=batch`（デフォルト）でBatch APIを使用
 
 ### 5.3 データベース設計
 
@@ -425,9 +445,49 @@ for await (const result of getBatchResults(batchId)) {
 
 ---
 
-## 9. 変更履歴
+## 9. 環境変数設定
+
+### 9.1 Claude API設定
+
+```env
+# --- Anthropic Claude API ---
+ANTHROPIC_API_KEY="sk-ant-..."
+
+# --- Claude API モード設定 ---
+# sync: 同期API（Web UIからのリアルタイムリクエスト用）
+# batch: Batch API（バックグラウンドジョブ用、50%コスト削減、デフォルト）
+CLAUDE_API_MODE="batch"
+
+# --- タイムアウト設定 ---
+# 同期API用タイムアウト (秒) - Web UIからのリクエスト用
+CLAUDE_SYNC_TIMEOUT_SECONDS=60
+
+# Batch API用ポーリング間隔 (秒)
+CLAUDE_BATCH_POLL_INTERVAL_SECONDS=60
+
+# Batch API用最大待機時間 (秒) - 24時間がAPI上限
+CLAUDE_BATCH_MAX_WAIT_SECONDS=3600
+```
+
+### 9.2 タイムアウト設定ガイド
+
+| 設定 | 推奨値 | 用途 |
+|------|--------|------|
+| `CLAUDE_SYNC_TIMEOUT_SECONDS` | 60 | 同期API（Web UI用）のタイムアウト |
+| `CLAUDE_BATCH_POLL_INTERVAL_SECONDS` | 60 | Batch APIのポーリング間隔 |
+| `CLAUDE_BATCH_MAX_WAIT_SECONDS` | 3600 | Batch APIの最大待機時間（1時間） |
+
+**注意:**
+- Batch APIは処理に数分〜数時間かかるため、同期API用のタイムアウト（30秒など）は不適切
+- 開発環境では `CLAUDE_BATCH_POLL_INTERVAL_SECONDS=5` で短縮可能
+- 本番環境では60秒以上を推奨（APIレート制限への配慮）
+
+---
+
+## 10. 変更履歴
 
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-29 | 初版作成、Batch API採用決定 |
 | 2026-01-29 | 通常フローでの標準採用に方針変更（大量生成時のみ→常時使用） |
+| 2026-01-29 | 同期APIクライアント追加、共通インターフェース設計、環境変数設定追加 |

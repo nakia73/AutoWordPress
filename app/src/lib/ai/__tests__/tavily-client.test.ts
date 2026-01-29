@@ -195,7 +195,10 @@ describe('TavilyClient', () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe('string');
+      expect(typeof result).toBe('object');
+      expect(result.context).toBeDefined();
+      expect(typeof result.context).toBe('string');
+      expect(result.apiCallCount).toBeGreaterThanOrEqual(1);
     });
 
     it('should include sub-queries when requested', async () => {
@@ -213,7 +216,9 @@ describe('TavilyClient', () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe('string');
+      expect(typeof result).toBe('object');
+      expect(result.context).toBeDefined();
+      expect(typeof result.context).toBe('string');
       // Should have made more than 3 calls (3 for multi-phase + 5 for sub-queries)
       expect(mockFetch.mock.calls.length).toBeGreaterThan(3);
     });

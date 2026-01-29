@@ -115,9 +115,14 @@ app/scripts/__tests__/
 
 ## 4. 入力パターン仕様
 
-### 4.1 サポートする入力モード
+> **更新 (2026-01):** `article_url` モードは削除されました。Trace機能（参考記事スタイル模倣）は Phase 10 で
+> アセット管理方式（`/settings/style-traces` で事前登録 → 選択）として再実装予定です。
+> 現在のサポートモード: `'site_url' | 'text' | 'hybrid'`
+
+### 4.1 サポートする入力モード（設計時）
 
 ```typescript
+// 設計時の定義（article_url は削除済み）
 type InputMode = 'site_url' | 'article_url' | 'text' | 'hybrid';
 ```
 

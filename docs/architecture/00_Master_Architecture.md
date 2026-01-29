@@ -95,7 +95,8 @@
 - **Image:** **kie.ai NanoBanana Pro**（主要）+ **Google API**（フォールバック）
 - **Scheduler:** **Inngest**（スケジュール自動化）
 
-**入力パターン:** 4モード対応（site_url / article_url / text / hybrid）
+**入力パターン:** 3モード対応（site_url / text / hybrid）
+> **Note:** Trace機能（参考記事スタイル模倣）は Phase 10 で実装予定（アセット管理方式）
 
 **重要:** LLMモデルはソフトコーディング（環境変数で切り替え可能）とする。ハードコード禁止。
 
@@ -138,9 +139,8 @@ graph TD
 flowchart LR
     subgraph Input["入力パターン"]
         A1[site_url]
-        A2[article_url]
-        A3[text]
-        A4[hybrid]
+        A2[text]
+        A3[hybrid]
     end
 
     subgraph Pipeline["6ステップパイプライン"]

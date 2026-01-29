@@ -55,9 +55,11 @@ Phase G          Phase F           Phase E
 | モード | 説明 | 必須入力 |
 |--------|------|---------|
 | `site_url` | 製品/サービスのランディングページURL | url |
-| `article_url` | 参考にしたい記事のURL（構造・スタイルを模倣） | url |
 | `text` | ユーザーが直接情報を入力 | productName, productDescription, targetKeyword |
 | `hybrid` | 複数ソースを組み合わせ | いずれか1つ以上 |
+
+> **Note:** Trace機能（Writing Style Trace - 参考記事の構造・スタイル模倣）は Phase 10 で実装予定。
+> アセット管理パターン: `/settings/style-traces` で事前にスタイルプロファイルを登録 → 記事生成時に選択。
 
 **正規化出力（NormalizedInput）:**
 ```typescript
@@ -67,12 +69,6 @@ type NormalizedInput = {
   targetKeyword: string;
   language: 'ja' | 'en';
   siteContent?: string;
-  referenceArticle?: {
-    title: string;
-    structure: string[];
-    style: string;
-    wordCount: number;
-  };
   additionalContext?: string;
   inputMode: InputMode;
   sourceUrls: string[];
@@ -300,10 +296,18 @@ LLMモデルは**ハードコードしてはならない**。環境変数また�
 
 **モデル設定例（環境変数）:**
 ```env
+# LLM設定
 GEMINI_API_KEY=AIza...
 LLM_MODEL=gemini-3-flash
-LLM_TIMEOUT_SECONDS=30
+LLM_TIMEOUT_SECONDS=60           # Gemini等の同期API用
 LLM_MAX_RETRIES=3
+
+# Claude API設定
+ANTHROPIC_API_KEY=sk-ant-...
+CLAUDE_API_MODE=batch            # batch（デフォルト）/ sync
+CLAUDE_SYNC_TIMEOUT_SECONDS=60   # 同期API用
+CLAUDE_BATCH_POLL_INTERVAL_SECONDS=60  # Batch用ポーリング間隔
+CLAUDE_BATCH_MAX_WAIT_SECONDS=3600     # Batch用最大待機時間
 ```
 
 **エラーハンドリング方針:**
@@ -347,6 +351,43 @@ MVPでは、「直近10記事のタイトルリスト」をプロンプトに含
 ## 実装済みモジュール一覧（2026年1月更新）
 
 > Rapid-Note2から流用・移植した機能を含む新規実装モジュールの一覧
+
+### Claude APIクライアント（2026年1月29日追加）
+
+**ファイル構成:**
+```
+app/src/lib/ai/
+├── claude-batch-client.ts  # Batch API専用（50%コスト削減）
+├── claude-client.ts        # 同期API + 共通インターフェース
+└── llm-client.ts           # マルチプロバイダー抽象化層
+```
+
+**機能:**
+- **ClaudeBatchClient**: Batch API専用、バックグラウンドジョブ用
+- **ClaudeSyncClient**: 同期API、Web UIからのリアルタイムリクエスト用
+- **ClaudeProvider**: 共通インターフェースによる切り替え
+- ストリーミング対応（同期クライアントのみ）
+- テスト: 29テスト（claude-client: 14, llm-client: 15）
+
+**共通インターフェース:**
+```typescript
+// Batch/Sync APIを同じインターフェースで切り替え
+const provider = createClaudeProvider({ type: 'batch' }); // or 'sync' or 'auto'
+const response = await provider.complete({
+  system: 'You are helpful.',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+**使い分け:**
+
+| シナリオ | 推奨API | 環境変数設定 |
+|---------|---------|-------------|
+| バックグラウンドジョブ | Batch API | `CLAUDE_API_MODE=batch` |
+| Web UIリアルタイム | Sync API | `CLAUDE_API_MODE=sync` |
+| 開発/テスト | 自動選択 | `CLAUDE_API_MODE=auto` |
+
+---
 
 ### Tavily検索クライアント（強化版）
 
@@ -393,10 +434,10 @@ scrapeUrl(url: string): Promise<ScrapedContent>
 **ファイル:** `app/src/lib/ai/article-input-handler.ts`
 
 **機能:**
-- 4つの入力モード（site_url, article_url, text, hybrid）の統合処理
+- 3つの入力モード（site_url, text, hybrid）の統合処理
 - 入力の正規化（NormalizedInput）
 - URLスクレイピング→製品情報抽出→キーワード生成の自動化
-- テスト: 13テスト
+- テスト: 11テスト
 
 **主要メソッド:**
 ```typescript
@@ -494,8 +535,15 @@ const result = await articleGenerator.generate({
 ```env
 # LLM設定（2026年1月更新）
 LLM_MODEL=gemini-3-flash          # デフォルト推奨（API ID: gemini-3-flash-preview）
+LLM_TIMEOUT_SECONDS=60            # 同期API用タイムアウト（秒）
 GEMINI_API_KEY=AIza...            # Google Gemini APIキー
-ANTHROPIC_API_KEY=sk-ant-...      # Anthropic Claude APIキー（オプション）
+
+# Claude API設定（2026年1月29日更新）
+ANTHROPIC_API_KEY=sk-ant-...      # Anthropic Claude APIキー
+CLAUDE_API_MODE=batch             # batch（50%コスト削減）/ sync（即座応答）
+CLAUDE_SYNC_TIMEOUT_SECONDS=60    # 同期API用タイムアウト（秒）
+CLAUDE_BATCH_POLL_INTERVAL_SECONDS=60  # Batch用ポーリング間隔（秒）
+CLAUDE_BATCH_MAX_WAIT_SECONDS=3600     # Batch用最大待機時間（秒、デフォルト1時間）
 
 # Tavily検索
 TAVILY_API_KEY=tvly-...           # セマンティック検索用
@@ -507,6 +555,11 @@ GOOGLE_API_KEY=AIza...            # Gemini 3 Pro Image用（gemini-3-pro-image-p
 # Webスクレイピング（オプション）
 JINA_API_KEY=...                  # Jina Reader 拡張機能用
 ```
+
+**タイムアウト設定について:**
+- `LLM_TIMEOUT_SECONDS`: Gemini等の同期APIに適用（推奨: 60秒）
+- `CLAUDE_BATCH_*`: Batch APIは処理に数分〜数時間かかるため、専用設定が必要
+- 同期API用の短いタイムアウト（30秒）をBatch APIに適用しないよう注意
 
 ---
 
@@ -549,3 +602,204 @@ JINA_API_KEY=...                  # Jina Reader 拡張機能用
 | **Lv.3** | Premium | 独自視点追加、深い専門性 | ピラーページ、重要記事 |
 
 詳細は [FIRST_PRINCIPLES_ARTICLE_GENERATION.md](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md) を参照。
+
+---
+
+## 検討中追加機能（2026年1月29日追記）
+
+以下の機能は記事生成の品質向上のために検討中。
+
+| 機能 | 概要 | 推奨Phase |
+|------|------|-----------|
+| **商品誘導機能 (Product CTA)** | 記事末尾等で販売商品への自然な誘導 | MVP |
+| **ペルソナ機能 (Writer Persona)** | 人間らしい言葉遣い・感情表現・ストーリーテリング | MVP/Phase 10 |
+| **Trace機能 (Writing Style Trace)** | 特定文章の文体・語彙特徴を解析・模倣（独立モジュール） | Phase 10 |
+| **記事リライト (Article Rewrite)** | 投稿済み記事の自動更新・最新化 | Phase 10-11 |
+| **キーワード分析 (Keyword Intelligence)** | GSC連携・キーワード提案・優先度スコアリング | Phase 12 |
+
+### 各機能の位置づけ
+
+```
+記事生成パイプライン v2.0 への統合位置:
+
+Phase F: 記事生成フェーズ
+┌─────────────────────────────────────────────────────────────────┐
+│ F1: Research（Tavily多段階 + AI Summary）                       │
+│ F2: Outline（SEO最適化構成）                                    │
+│ F3: Content（User Style Vector + ★Writer Persona適用）         │
+│     └── ★Trace機能からのスタイル適用もここで実行               │
+│ F4: Meta Description                                            │
+│ F5: Thumbnail（NanoBanana Pro）                                 │
+│ F6: Section Images                                              │
+│ F7: Transparency Footer                                         │
+│ F8: ★Product CTA挿入（新規）                                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 記事リライトパイプライン（Article Rewrite Pipeline）
+
+**目的:** 投稿済み記事を定期的または条件トリガーで更新し、検索順位と情報鮮度を維持する
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Article Rewrite Pipeline                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [トリガー]                                                     │
+│  ├─ scheduled: スケジュール実行（30日/60日/90日等）            │
+│  ├─ gsc_alert: GSC順位低下検知                                  │
+│  ├─ manual: ユーザー手動実行                                    │
+│  └─ event: 関連ニュース検知                                     │
+│                                                                 │
+│  [リライトパイプライン]                                         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ R1: Current Analysis（現状分析）                          │   │
+│  │     ・元記事の構造・品質評価                               │   │
+│  │     ・競合記事との差分分析                                 │   │
+│  │     ・記事目標との整合性チェック                           │   │
+│  │                                                          │   │
+│  │ R2: Information Gathering（情報収集）                     │   │
+│  │     ・Tavily検索で最新情報取得                            │   │
+│  │     ・競合記事のスクレイピング                            │   │
+│  │     ・GSCデータ取得（オプション）                         │   │
+│  │                                                          │   │
+│  │ R3: Strategy Decision（方針決定）                         │   │
+│  │     ・更新強度の決定（light/moderate/major）              │   │
+│  │     ・更新対象セクションの特定                            │   │
+│  │     ・削除禁止セクションの保護                            │   │
+│  │                                                          │   │
+│  │ R4: Content Update（コンテンツ更新）                      │   │
+│  │     ・新情報の追加・古い情報の削除                        │   │
+│  │     ・構成の最適化                                        │   │
+│  │     ・SEO要素の更新                                       │   │
+│  │     ・ペルソナ/トレースの一貫性維持                       │   │
+│  │                                                          │   │
+│  │ R5: Diff Review（差分レビュー生成）                       │   │
+│  │     ・変更箇所のハイライト生成                            │   │
+│  │     ・変更サマリーの作成                                  │   │
+│  │                                                          │   │
+│  │ R6: Publish or Queue（公開または承認待ち）                │   │
+│  │     ・light: 自動公開                                     │   │
+│  │     ・moderate/major: 承認待ち                            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**更新強度レベル:**
+
+| レベル | 名称 | 内容 | 承認 |
+|--------|------|------|------|
+| `light` | 軽微更新 | 日付・数字更新、リンク切れ修正、誤字脱字 | 不要（自動） |
+| `moderate` | 中程度更新 | 新セクション追加、既存セクション拡充 | 要承認 |
+| `major` | 大幅更新 | 構成変更、大幅な内容変更、キーワード戦略変更 | 要承認 |
+
+**Inngestジョブ定義:**
+
+```typescript
+// 定期リライトジョブ
+inngest.createFunction(
+  { id: 'article-rewrite-scheduled' },
+  { cron: '0 3 * * *' }, // 毎日AM3時
+  async ({ step }) => {
+    // 1. リライト対象記事を取得
+    const articles = await step.run('get-rewrite-targets', async () => {
+      return db.article.findMany({
+        where: {
+          rewriteSchedule: {
+            isActive: true,
+            nextScheduledAt: { lte: new Date() }
+          }
+        }
+      });
+    });
+
+    // 2. 各記事をリライト
+    for (const article of articles) {
+      await step.run(`rewrite-${article.id}`, async () => {
+        return articleRewriter.execute({
+          articleId: article.id,
+          triggerType: 'scheduled'
+        });
+      });
+    }
+  }
+);
+
+// GSCアラートトリガー
+inngest.createFunction(
+  { id: 'article-rewrite-gsc-alert' },
+  { event: 'gsc/rank-dropped' },
+  async ({ event, step }) => {
+    await step.run('rewrite-on-alert', async () => {
+      return articleRewriter.execute({
+        articleId: event.data.articleId,
+        triggerType: 'gsc_alert',
+        triggerReason: `Rank dropped from ${event.data.previousRank} to ${event.data.currentRank}`
+      });
+    });
+  }
+);
+```
+
+---
+
+### GSC連携パイプライン（GSC Integration Pipeline）
+
+**目的:** Google Search Consoleからデータを取得し、記事パフォーマンス監視とリライトトリガーを実現
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              GSC Integration Pipeline                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [G1: データ同期（1日1回）]                                     │
+│  ├─ Google Search Console API v3 呼び出し                       │
+│  ├─ 各記事のクリック数・インプレッション・順位取得              │
+│  └─ GscMetricsテーブルに保存                                    │
+│                                                                 │
+│  [G2: アラート判定]                                             │
+│  ├─ 順位低下チェック（閾値: 設定値より下落）                    │
+│  ├─ CTR低下チェック（閾値: 前週比X%以上下落）                   │
+│  └─ アラート発火 → Inngestイベント送信                         │
+│                                                                 │
+│  [G3: 効果測定（リライト後）]                                   │
+│  ├─ リライト前後のメトリクス比較                                │
+│  └─ ROI計算（リライトコスト vs 流入増加）                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### キーワード分析パイプライン（Keyword Intelligence Pipeline）
+
+**目的:** GSCデータと外部情報からキーワード提案を生成し、記事生成の最適化を支援
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Keyword Intelligence Pipeline                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [K1: キーワードギャップ分析]                                   │
+│  ├─ GSCで見つかるが記事がないキーワード                         │
+│  └─ 競合が上位だが自サイトがないキーワード                      │
+│                                                                 │
+│  [K2: キーワードクラスタリング]                                 │
+│  ├─ 関連キーワードのグループ化                                  │
+│  └─ ピラーページ/クラスターコンテンツ提案                       │
+│                                                                 │
+│  [K3: 優先度スコアリング]                                       │
+│  ├─ 検索ボリューム × 競合難易度 × 関連性                        │
+│  └─ ROI予測                                                     │
+│                                                                 │
+│  [K4: 記事生成連携]                                             │
+│  ├─ 推奨キーワード → 記事生成キューへ                          │
+│  └─ キーワードカレンダー生成                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+詳細仕様: [FIRST_PRINCIPLES_ARTICLE_GENERATION.md#11-追加検討機能](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md#11-追加検討機能2026年1月29日追記)

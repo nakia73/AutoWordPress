@@ -1,8 +1,12 @@
 // Argo Note - LLM Client
 // Multi-provider support: Gemini, Claude (Anthropic)
 // ソフトコーディング: 環境変数でモデルを切り替え可能
+//
+// 重要: Claude APIは常にBatch APIを使用（50%コスト削減）
+// 詳細: docs/architecture/05_Claude_Batch_API.md
 
 import type { LLMCompletionResponse, LLMMessage } from '@/types';
+import { ClaudeBatchClient, executeSingleRequest } from './claude-batch-client';
 
 // ============================================
 // サポートするLLMモデル定義
@@ -62,8 +66,14 @@ export type LLMProvider = 'google' | 'anthropic' | 'litellm';
 
 // 環境変数から設定を読み込み
 const LLM_MODEL = process.env.LLM_MODEL || 'gemini-3-flash';
-const LLM_TIMEOUT = parseInt(process.env.LLM_TIMEOUT_SECONDS || '30') * 1000;
+const LLM_TIMEOUT = parseInt(process.env.LLM_TIMEOUT_SECONDS || '60') * 1000;
 const USE_LITELLM = process.env.USE_LITELLM === 'true';
+
+// Claude Batch API用設定
+const CLAUDE_BATCH_POLL_INTERVAL =
+  parseInt(process.env.CLAUDE_BATCH_POLL_INTERVAL_SECONDS || '60', 10) * 1000;
+const CLAUDE_BATCH_MAX_WAIT =
+  parseInt(process.env.CLAUDE_BATCH_MAX_WAIT_SECONDS || '3600', 10) * 1000;
 
 // APIキー取得（プロバイダー別）
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.LITELLM_API_KEY || '';
@@ -118,6 +128,7 @@ export class LLMClient {
   private apiKey: string;
   private baseUrl: string;
   private useLiteLLM: boolean;
+  private claudeBatchClient: ClaudeBatchClient | null = null;
 
   constructor(options?: { model?: string; apiKey?: string; baseUrl?: string; useLiteLLM?: boolean }) {
     const modelKey = options?.model || LLM_MODEL;
@@ -133,6 +144,18 @@ export class LLMClient {
     } else {
       this.apiKey = options?.apiKey || getApiKey(this.modelConfig.provider);
       this.baseUrl = options?.baseUrl || this.modelConfig.baseUrl;
+    }
+
+    // Anthropicプロバイダーの場合、Batch Clientを初期化
+    if (this.modelConfig.provider === 'anthropic' && !this.useLiteLLM) {
+      try {
+        this.claudeBatchClient = new ClaudeBatchClient({
+          apiKey: this.apiKey,
+          defaultModel: this.model,
+        });
+      } catch (error) {
+        console.warn('[LLMClient] Failed to initialize Claude Batch Client:', error);
+      }
     }
   }
 
@@ -156,6 +179,11 @@ export class LLMClient {
       timeout?: number;
     }
   ): Promise<string> {
+    // Anthropicプロバイダーの場合、Batch APIを使用（50%コスト削減）
+    if (this.modelConfig.provider === 'anthropic' && !this.useLiteLLM && this.claudeBatchClient) {
+      return this.callClaudeBatch(messages, options);
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), options?.timeout || LLM_TIMEOUT);
 
@@ -166,9 +194,6 @@ export class LLMClient {
       if (this.useLiteLLM || this.modelConfig.provider === 'google') {
         // LiteLLM または Google (OpenAI互換API)
         response = await this.callOpenAICompatible(messages, options, controller.signal);
-      } else if (this.modelConfig.provider === 'anthropic') {
-        // Anthropic Messages API
-        response = await this.callAnthropic(messages, options, controller.signal);
       } else {
         // デフォルト: OpenAI互換
         response = await this.callOpenAICompatible(messages, options, controller.signal);
@@ -184,10 +209,7 @@ export class LLMClient {
       // レスポンスのパース（プロバイダー別）
       const data = await response.json();
 
-      if (this.modelConfig.provider === 'anthropic' && !this.useLiteLLM) {
-        // Anthropic形式のレスポンス
-        return data.content?.[0]?.text || '';
-      } else if (this.modelConfig.provider === 'google' && !this.useLiteLLM) {
+      if (this.modelConfig.provider === 'google' && !this.useLiteLLM) {
         // Google AI Studio直接呼び出しのレスポンス形式
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } else {
@@ -201,6 +223,51 @@ export class LLMClient {
       }
       throw error;
     }
+  }
+
+  /**
+   * Claude Batch API経由での呼び出し
+   * 50%コスト削減、非同期処理
+   *
+   * 注: 詳細なバッチ処理ロジックはclaude-batch-client.tsに委譲
+   */
+  private async callClaudeBatch(
+    messages: LLMMessage[],
+    options?: { temperature?: number; maxTokens?: number }
+  ): Promise<string> {
+    if (!this.claudeBatchClient) {
+      throw new Error('Claude Batch Client not initialized');
+    }
+
+    // systemメッセージを分離
+    const systemMessage = messages.find(m => m.role === 'system');
+    const nonSystemMessages = messages.filter(m => m.role !== 'system');
+
+    console.log(`[LLMClient] Executing Claude Batch request...`);
+
+    // executeSingleRequest ヘルパーを使用
+    const result = await executeSingleRequest(
+      this.claudeBatchClient,
+      systemMessage?.content,
+      nonSystemMessages.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+      {
+        model: this.model,
+        maxTokens: options?.maxTokens ?? 4096,
+        temperature: options?.temperature ?? 0.7,
+        pollIntervalMs: CLAUDE_BATCH_POLL_INTERVAL,
+        maxWaitMs: CLAUDE_BATCH_MAX_WAIT,
+        onProgress: (s) => {
+          console.log(`[LLMClient] Batch progress: processing=${s.requestCounts.processing}, succeeded=${s.requestCounts.succeeded}`);
+        },
+      }
+    );
+
+    console.log(`[LLMClient] Batch succeeded, tokens: input=${result.usage?.inputTokens}, output=${result.usage?.outputTokens}`);
+
+    return result.content;
   }
 
   /**
@@ -250,39 +317,6 @@ export class LLMClient {
     });
   }
 
-  /**
-   * Anthropic Messages API呼び出し
-   */
-  private async callAnthropic(
-    messages: LLMMessage[],
-    options?: { temperature?: number; maxTokens?: number },
-    signal?: AbortSignal
-  ): Promise<Response> {
-    // systemメッセージを分離
-    const systemMessage = messages.find(m => m.role === 'system');
-    const nonSystemMessages = messages.filter(m => m.role !== 'system');
-
-    return fetch(`${this.baseUrl}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: options?.maxTokens ?? 4096,
-        temperature: options?.temperature ?? 0.7,
-        system: systemMessage?.content || '',
-        messages: nonSystemMessages.map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
-      }),
-      signal,
-    });
-  }
-
   // Helper for simple prompts
   async prompt(systemPrompt: string, userPrompt: string): Promise<string> {
     return this.complete([
@@ -325,31 +359,6 @@ export class LLMClient {
 // Default client instance
 export const llmClient = new LLMClient();
 
-// Article generation specific prompts
-export const ARTICLE_PROMPTS = {
-  OUTLINE: `You are an expert SEO content strategist. Generate a comprehensive article outline.
-The outline should include:
-- A compelling title optimized for the target keyword
-- H2 and H3 headings that cover the topic thoroughly
-- Brief notes on what each section should cover
-Return as JSON with the structure:
-{
-  "title": "string",
-  "sections": [
-    { "heading": "string", "level": 2 | 3, "notes": "string" }
-  ]
-}`,
-
-  CONTENT: `You are an expert content writer specializing in SEO-optimized articles.
-Write engaging, informative content that:
-- Is optimized for the target keyword naturally (no keyword stuffing)
-- Provides genuine value to readers
-- Uses clear, accessible language
-- Includes specific examples and actionable advice
-- Is formatted in valid HTML with proper heading hierarchy`,
-
-  META_DESCRIPTION: `Write a compelling meta description (max 160 characters) that:
-- Includes the target keyword naturally
-- Encourages clicks from search results
-- Accurately summarizes the content`,
-};
+// Re-export ARTICLE_PROMPTS for backward compatibility
+// 新規コードは直接 './prompts' からインポートすること
+export { ARTICLE_PROMPTS } from './prompts';

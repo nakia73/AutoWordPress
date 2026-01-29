@@ -50,14 +50,16 @@ describeIntegration('Integration Tests (Real API)', () => {
       const { TavilyClient } = await import('../tavily-client');
       const client = new TavilyClient();
 
-      const research = await client.researchForArticle('タスク管理ツール', { language: 'ja' });
+      const result = await client.researchForArticle('タスク管理ツール', { language: 'ja' });
 
-      expect(research).toBeDefined();
-      expect(typeof research).toBe('string');
-      expect(research.length).toBeGreaterThan(100);
+      expect(result).toBeDefined();
+      expect(result.context).toBeDefined();
+      expect(typeof result.context).toBe('string');
+      expect(result.context.length).toBeGreaterThan(100);
+      expect(result.apiCallCount).toBeGreaterThanOrEqual(1);
 
       // Should have multi-phase content
-      expect(research).toMatch(/NEWS|RECENT|ニュース/i);
+      expect(result.context).toMatch(/NEWS|RECENT|ニュース/i);
     }, 60000);
   });
 

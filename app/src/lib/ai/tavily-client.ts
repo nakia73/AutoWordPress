@@ -3,6 +3,7 @@
 // Enhanced with 3-phase search (NEWS, SNS, OFFICIAL) based on Rapid-Note2
 
 import type { TavilySearchResponse, TavilySearchResult, TavilyToLLMInput } from '@/types';
+import type { PipelineLogger } from './pipeline-logger';
 
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 const TAVILY_BASE_URL = 'https://api.tavily.com';
@@ -19,6 +20,7 @@ export type TavilySearchOptions = {
   excludeDomains?: string[];
   country?: string;
   includeImages?: boolean;
+  logger?: PipelineLogger;
 };
 
 // Multi-phase research result
@@ -28,6 +30,7 @@ export type MultiPhaseResearchResult = {
   sns: TavilySearchResult[];
   official: TavilySearchResult[];
   formattedContext: string;
+  apiCallCount: number;
 };
 
 export class TavilyClient {
@@ -142,19 +145,27 @@ export class TavilyClient {
       searchDepth?: 'basic' | 'advanced';
       timeRange?: 'day' | 'week' | 'month' | 'year';
       country?: string;
+      logger?: PipelineLogger;
     }
   ): Promise<MultiPhaseResearchResult> {
     const maxResults = options?.maxResults || 5;
     const searchDepth = options?.searchDepth || 'advanced';
     const timeRange = options?.timeRange || 'week';
     const country = options?.country || 'japan';
+    const logger = options?.logger;
 
     const summaries: string[] = [];
     const contextParts: string[] = [];
+    let apiCallCount = 0;
+
+    logger?.info('Tavily', '3段階マルチフェーズ検索を開始', { keyword, searchDepth, country });
 
     // Phase 1: Recent News Search (Last 24 hours)
     let newsResults: TavilySearchResult[] = [];
     try {
+      logger?.info('Tavily-Phase1', 'NEWS検索を実行中...', { query: keyword, topic: 'news', timeRange: 'day' });
+      const stopTimer = logger?.startTimer('Tavily-Phase1');
+
       const newsData = await this.search(keyword, {
         topic: 'news',
         timeRange: 'day', // News always last 24h
@@ -163,23 +174,41 @@ export class TavilyClient {
         includeAnswer: 'advanced',
         country,
       });
+      apiCallCount++;
+
+      const duration = stopTimer?.();
 
       if (newsData.answer) {
         summaries.push(`[NEWS] ${newsData.answer}`);
       }
 
       newsResults = this.filterByScore(newsData.results || []);
+      logger?.success('Tavily-Phase1', 'NEWS検索完了', {
+        totalResults: newsData.results?.length || 0,
+        filteredResults: newsResults.length,
+        hasAnswer: !!newsData.answer,
+        durationMs: duration,
+      });
+
       if (newsResults.length > 0) {
         contextParts.push(this.formatResults(newsResults, 'RECENT NEWS (Last 24h)'));
       }
     } catch (error) {
+      logger?.error('Tavily-Phase1', 'NEWS検索失敗', { error: String(error) });
       console.warn('News search failed:', error);
     }
 
     // Phase 2: SNS/Realtime Reaction Search (X, Reddit)
     let snsResults: TavilySearchResult[] = [];
     try {
-      const snsData = await this.search(`${keyword} latest reaction`, {
+      const snsQuery = `${keyword} latest reaction`;
+      logger?.info('Tavily-Phase2', 'SNS検索を実行中...', {
+        query: snsQuery,
+        domains: ['x.com', 'twitter.com', 'reddit.com']
+      });
+      const stopTimer = logger?.startTimer('Tavily-Phase2');
+
+      const snsData = await this.search(snsQuery, {
         topic: 'general',
         timeRange,
         maxResults,
@@ -188,22 +217,39 @@ export class TavilyClient {
         includeDomains: ['x.com', 'twitter.com', 'reddit.com'],
         country,
       });
+      apiCallCount++;
+
+      const duration = stopTimer?.();
 
       if (snsData.answer) {
         summaries.push(`[SNS] ${snsData.answer}`);
       }
 
       snsResults = this.filterByScore(snsData.results || []);
+      logger?.success('Tavily-Phase2', 'SNS検索完了', {
+        totalResults: snsData.results?.length || 0,
+        filteredResults: snsResults.length,
+        hasAnswer: !!snsData.answer,
+        durationMs: duration,
+      });
+
       if (snsResults.length > 0) {
         contextParts.push(this.formatResults(snsResults, 'SNS/COMMUNITY REACTIONS'));
       }
     } catch (error) {
+      logger?.error('Tavily-Phase2', 'SNS検索失敗', { error: String(error) });
       console.warn('SNS search failed:', error);
     }
 
     // Phase 3: Official/Authoritative Sources
     let officialResults: TavilySearchResult[] = [];
     try {
+      logger?.info('Tavily-Phase3', 'OFFICIAL検索を実行中...', {
+        query: keyword,
+        excludeDomains: ['x.com', 'twitter.com', 'reddit.com', 'facebook.com']
+      });
+      const stopTimer = logger?.startTimer('Tavily-Phase3');
+
       const officialData = await this.search(keyword, {
         topic: 'general',
         maxResults,
@@ -212,16 +258,27 @@ export class TavilyClient {
         excludeDomains: ['x.com', 'twitter.com', 'reddit.com', 'facebook.com'],
         country,
       });
+      apiCallCount++;
+
+      const duration = stopTimer?.();
 
       if (officialData.answer) {
         summaries.push(`[OFFICIAL] ${officialData.answer}`);
       }
 
       officialResults = this.filterByScore(officialData.results || []);
+      logger?.success('Tavily-Phase3', 'OFFICIAL検索完了', {
+        totalResults: officialData.results?.length || 0,
+        filteredResults: officialResults.length,
+        hasAnswer: !!officialData.answer,
+        durationMs: duration,
+      });
+
       if (officialResults.length > 0) {
         contextParts.push(this.formatResults(officialResults, 'OFFICIAL/AUTHORITATIVE SOURCES'));
       }
     } catch (error) {
+      logger?.error('Tavily-Phase3', 'OFFICIAL検索失敗', { error: String(error) });
       console.warn('Official sources search failed:', error);
     }
 
@@ -238,12 +295,21 @@ export class TavilyClient {
       formattedContext += contextParts.join('\n\n');
     }
 
+    logger?.success('Tavily', 'マルチフェーズ検索完了', {
+      totalApiCalls: apiCallCount,
+      newsCount: newsResults.length,
+      snsCount: snsResults.length,
+      officialCount: officialResults.length,
+      summaryCount: summaries.length,
+    });
+
     return {
       summaries,
       news: newsResults,
       sns: snsResults,
       official: officialResults,
       formattedContext,
+      apiCallCount,
     };
   }
 
@@ -304,9 +370,14 @@ export class TavilyClient {
     options?: {
       language?: 'en' | 'ja';
       includeSubQueries?: boolean;
+      logger?: PipelineLogger;
     }
-  ): Promise<string> {
+  ): Promise<{ context: string; apiCallCount: number }> {
     const country = options?.language === 'ja' ? 'japan' : undefined;
+    const logger = options?.logger;
+    let totalApiCalls = 0;
+
+    logger?.info('Research', 'リサーチを開始', { keyword, language: options?.language });
 
     // Use multi-phase search
     const multiPhaseResult = await this.multiPhaseSearch(keyword, {
@@ -314,14 +385,19 @@ export class TavilyClient {
       searchDepth: 'advanced',
       timeRange: 'week',
       country,
+      logger,
     });
+    totalApiCalls += multiPhaseResult.apiCallCount;
 
     let researchContext = multiPhaseResult.formattedContext;
 
     // Optionally add sub-query results
     if (options?.includeSubQueries) {
       const subQueries = RESEARCH_QUERIES.forKeyword(keyword);
+      logger?.info('Research', 'サブクエリ検索を開始', { queries: subQueries });
+
       const subResults = await this.researchTopic(keyword, subQueries);
+      totalApiCalls += subQueries.length;
 
       for (const [query, results] of subResults) {
         const filtered = this.filterByScore(results.results || []);
@@ -333,9 +409,15 @@ export class TavilyClient {
           }
         }
       }
+      logger?.success('Research', 'サブクエリ検索完了', { queriesProcessed: subQueries.length });
     }
 
-    return researchContext;
+    logger?.success('Research', 'リサーチ完了', {
+      totalApiCalls,
+      contextLength: researchContext.length,
+    });
+
+    return { context: researchContext, apiCallCount: totalApiCalls };
   }
 }
 

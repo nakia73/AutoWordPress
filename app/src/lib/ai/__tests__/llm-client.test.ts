@@ -1,5 +1,12 @@
 /**
  * LLM Client Unit Tests
+ *
+ * Note: LLMClientはプロバイダー別に異なるAPI形式を使用:
+ * - google: Google AI Studio形式 (contents/candidates)
+ * - anthropic: Anthropic Messages形式
+ * - litellm: OpenAI互換形式 (messages/choices)
+ *
+ * このテストではLiteLLMモード（OpenAI互換）をテストします。
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -13,10 +20,12 @@ describe('LLMClient', () => {
   let client: LLMClient;
 
   beforeEach(() => {
+    // useLiteLLM: true でOpenAI互換モードをテスト
     client = new LLMClient({
       model: 'test-model',
       apiKey: 'test-api-key',
       baseUrl: 'https://test-api.com/v1',
+      useLiteLLM: true, // OpenAI互換形式を使用
     });
     mockFetch.mockReset();
   });

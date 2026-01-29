@@ -273,8 +273,10 @@ interface SectionImageResult {
 ### 4.1 サポートする入力モード
 
 ```typescript
-type InputMode = 'site_url' | 'article_url' | 'text' | 'hybrid';
+type InputMode = 'site_url' | 'text' | 'hybrid';
 ```
+
+> **注意:** `article_url`（参考記事URL模倣）モードは、本来の設計である「Trace機能（Writing Style Trace）」として Phase 10 で正式実装予定です。Trace機能は専用管理画面（`/settings/style-traces`）で事前にスタイルプロファイルを登録し、記事生成時に選択する「アセット管理方式」で実装されます。
 
 ### 4.2 各モードの詳細
 
@@ -297,27 +299,7 @@ interface SiteUrlInput {
 3. ターゲットキーワードを自動生成（未指定時）
 4. 記事生成へ
 
-#### Mode 2: `article_url`（模倣記事URL入力）
-
-参考にしたい記事のURLを入力。
-
-```typescript
-interface ArticleUrlInput {
-  mode: 'article_url';
-  url: string;                 // 必須: 参考記事URL
-  productName?: string;        // 任意: 製品名
-  productDescription?: string; // 任意: 製品説明
-  language?: 'ja' | 'en';
-}
-```
-
-**処理フロー:**
-1. 参考記事をスクレイピング
-2. 構造（見出し階層）・スタイル・語数を分析
-3. 同様の構造で新記事を生成
-4. 製品情報は記事から推測 or ユーザー入力
-
-#### Mode 3: `text`（テキスト入力）
+#### Mode 2: `text`（テキスト入力）
 
 ユーザーが直接情報を入力。
 
@@ -332,15 +314,14 @@ interface TextInput {
 }
 ```
 
-#### Mode 4: `hybrid`（ハイブリッド入力）
+#### Mode 3: `hybrid`（ハイブリッド入力）
 
-複数ソースを組み合わせ。
+サイトURLとテキスト入力を組み合わせ。
 
 ```typescript
 interface HybridInput {
   mode: 'hybrid';
   siteUrl?: string;            // 任意: 製品ページURL
-  articleUrl?: string;         // 任意: 参考記事URL
   productName?: string;        // 任意（URLから抽出可）
   productDescription?: string;
   targetKeyword?: string;
@@ -363,6 +344,8 @@ interface NormalizedInput {
 
   // オプション拡張
   siteContent?: string;
+  // referenceArticle: Phase 10「Trace機能」で使用予定
+  // 現時点では未使用
   referenceArticle?: {
     title: string;
     structure: string[];
