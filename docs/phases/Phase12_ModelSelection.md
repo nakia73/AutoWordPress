@@ -9,9 +9,11 @@
 ユーザーが使用するLLMモデルを自分で選択・変更できる機能を提供します。
 
 **背景:**
-- MVPではGemini 3.0 Proを標準採用（ソフトコーディング）
+- MVPではGemini 3 Flashを標準採用（ソフトコーディング）
 - フォールバックは設けず、エラー時はユーザーに通知
 - 本Phaseで、ユーザーが別モデルを選択できるUIを提供
+
+> **注意:** 本ドキュメントは [StreamM_LLMSelector.md](./StreamM_LLMSelector.md) に統合されました。最新の実装計画はそちらを参照してください。
 
 ## 機能要件
 
@@ -41,16 +43,18 @@ APIエラー発生時の挙動：
 
 ### 3. 対応モデル（段階的拡張）
 
-初期対応：
-- Gemini 3.0 Pro（標準）
-- Gemini 3.0 Flash
+初期対応（最新世代のみ）：
 
-将来対応（ユーザー要望に応じて）：
-- Claude系
-- GPT系
-- その他
+**Google Gemini 3:**
+- `gemini-3-flash-preview` - Gemini 3 Flash（デフォルト、高速・低コスト）
+- `gemini-3-pro-preview` - Gemini 3 Pro（高品質）
 
-**注:** 対応モデルの追加はユーザーフィードバックに基づいて判断
+**Anthropic Claude 4.5:**
+- `claude-haiku-4-5` - Claude Haiku 4.5（高速・低コスト）
+- `claude-sonnet-4-5` - Claude Sonnet 4.5（バランス型）
+- `claude-opus-4-5` - Claude Opus 4.5（最高品質）
+
+**注:** 旧世代モデル（Gemini 2.x, Claude 3.x/4.0）は使用不可
 
 ## 技術仕様
 
@@ -58,7 +62,7 @@ APIエラー発生時の挙動：
 
 ```sql
 -- usersテーブルに追加
-ALTER TABLE users ADD COLUMN llm_model VARCHAR(50) DEFAULT 'gemini-3.0-pro';
+ALTER TABLE users ADD COLUMN llm_model VARCHAR(50) DEFAULT 'gemini-3-flash-preview';
 ```
 
 ### API設計
@@ -66,14 +70,15 @@ ALTER TABLE users ADD COLUMN llm_model VARCHAR(50) DEFAULT 'gemini-3.0-pro';
 ```typescript
 // モデル変更API
 PUT /api/users/settings/llm-model
-Body: { model: "gemini-3.0-flash" }
+Body: { model: "gemini-3-pro-preview" }
 
 // 利用可能モデル取得API
 GET /api/llm/available-models
 Response: {
   models: [
-    { id: "gemini-3.0-pro", name: "Gemini 3.0 Pro", description: "...", default: true },
-    { id: "gemini-3.0-flash", name: "Gemini 3.0 Flash", description: "..." }
+    { id: "gemini-3-flash-preview", name: "Gemini 3 Flash", description: "...", default: true },
+    { id: "gemini-3-pro-preview", name: "Gemini 3 Pro", description: "..." },
+    { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5", description: "..." }
   ]
 }
 ```

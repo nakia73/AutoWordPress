@@ -234,19 +234,20 @@ console.log(result.summaries);  // Tavily AI サマリー
 
 ## 6. 環境変数
 
-以下の環境変数が必要です:
+以下の環境変数が必要です（2026年1月更新）:
 
 ```bash
 # LLM設定
-LLM_MODEL=gemini-2.0-flash-exp
-LITELLM_API_KEY=your-api-key
-LITELLM_BASE_URL=https://your-litellm-proxy.com
+LLM_MODEL=gemini-3-flash           # デフォルト推奨（API ID: gemini-3-flash-preview）
+GEMINI_API_KEY=AIza...             # Google Gemini APIキー
+ANTHROPIC_API_KEY=sk-ant-...       # Anthropic Claude APIキー（オプション）
 
 # Tavily検索
 TAVILY_API_KEY=tvly-your-api-key
 
-# NanoBanana Pro画像生成 (Google API)
-GOOGLE_API_KEY=your-google-api-key
+# 画像生成（kie.ai主要 + Gemini 3 Pro Imageフォールバック）
+KIE_AI_API_KEY=your-kie-ai-key     # kie.ai NanoBanana Pro（$0.09/image）
+GOOGLE_API_KEY=your-google-api-key # Gemini 3 Pro Image（gemini-3-pro-image-preview）
 ```
 
 ---

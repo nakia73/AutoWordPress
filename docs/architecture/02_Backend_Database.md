@@ -242,6 +242,71 @@ export type ProvisionBlogPayload = {
 };
 ```
 
+#### 記事生成関連の型定義（Stream A 実装済み）
+
+```typescript
+// 記事コンテンツ
+export type ArticleContent = {
+  title: string;
+  slug: string;
+  content: string;           // HTML
+  meta_description: string;
+  target_keyword: string;
+  search_intent: string;
+  article_type: ArticleType;
+  language: 'ja' | 'en';
+  word_count: number;
+  thumbnail?: ThumbnailResult;
+  sectionImagesGenerated?: number;
+  sources?: string[];
+  generated_at: string;
+};
+
+export type ArticleType = 'article' | 'faq' | 'glossary';
+
+// ペルソナ
+export type Persona = {
+  name: string;
+  demographics: {
+    age_range: string;
+    occupation: string;
+    location: string;
+  };
+  pain_points: string[];
+  goals: string[];
+  product_fit: string;
+};
+
+// キーワード候補
+export type KeywordCandidate = {
+  keyword: string;
+  category: 'problem' | 'solution' | 'product' | 'comparison' | 'how-to';
+  search_intent: 'informational' | 'transactional' | 'navigational';
+  priority: number;
+  rationale: string;
+};
+
+// 入力パターン
+export type InputMode = 'site_url' | 'article_url' | 'text' | 'hybrid';
+
+export type NormalizedInput = {
+  productName: string;
+  productDescription: string;
+  targetKeyword: string;
+  language: 'ja' | 'en';
+  siteContent?: string;
+  referenceArticle?: {
+    title: string;
+    structure: string[];
+    style: string;
+    wordCount: number;
+  };
+  additionalContext?: string;
+  inputMode: InputMode;
+  sourceUrls: string[];
+};
+```
+
 ### 課金・決済（Phase 5）
 
 ```sql

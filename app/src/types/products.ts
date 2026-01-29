@@ -81,3 +81,35 @@ export const PRODUCT_STATUS = {
 } as const;
 
 export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
+
+// Persona Generation (A-1)
+export type Persona = {
+  name: string;
+  demographics: {
+    age_range: string;
+    occupation: string;
+    location: string;
+  };
+  pain_points: string[];
+  goals: string[];
+  product_fit: string;
+};
+
+export type PersonaResult = {
+  personas: Persona[];
+};
+
+// Keyword Candidate Generation (A-1)
+export type KeywordCategory = 'problem' | 'solution' | 'product' | 'comparison' | 'how-to';
+
+export type KeywordCandidate = {
+  keyword: string;
+  category: KeywordCategory;
+  search_intent: KeywordIntent;
+  priority: number;
+  rationale: string;
+};
+
+export type KeywordCandidateResult = {
+  keyword_candidates: KeywordCandidate[];
+};

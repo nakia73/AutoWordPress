@@ -109,7 +109,7 @@ export const generateArticle = inngest.createFunction(
       await prisma.articleGenerationLog.create({
         data: {
           articleId: articleId,
-          modelUsed: process.env.LLM_MODEL || 'gemini-2.0-flash-exp',
+          modelUsed: process.env.LLM_MODEL || 'gemini-3-flash',
           inputTokens: 0, // Would be tracked by LLM client in production
           outputTokens: 0,
           generationTimeMs,

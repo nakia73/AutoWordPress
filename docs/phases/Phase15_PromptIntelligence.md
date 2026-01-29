@@ -47,7 +47,7 @@
 |------|------|
 | 使用プロンプトテンプレートID | どのプロンプトを使用したか |
 | 生成ロジックバージョン | パイプラインのバージョン |
-| LLMモデル | gemini-3.0-pro等 |
+| LLMモデル | gemini-3-pro-preview / claude-sonnet-4-5 等 |
 | Temperature | 生成時の温度パラメータ |
 | ターゲットキーワード | 狙ったキーワード |
 | 検索意図分類 | Awareness/Interest/Consideration/Decision |

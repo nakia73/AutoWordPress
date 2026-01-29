@@ -1,12 +1,26 @@
 // Argo Note - Image Generator Service
-// NanoBanana Pro (gemini-3-pro-image-preview) for thumbnail and section images
-// Based on Rapid-Note2's thumbnail_service.py
+// kie.ai NanoBanana Pro (primary) + Google API (fallback)
+// Based on Rapid-Note2's thumbnail_service.py and create-anything's gemini.js
+//
+// 画像生成モデル一覧:
+// - kie.ai NanoBanana Pro: $0.09/image (primary)
+// - Google Gemini 3 Pro Image (gemini-3-pro-image-preview): $0.134/image (fallback)
+//   ※ Google Gemini 3系の画像生成モデル（2026年1月リリース）
 
 import { llmClient } from './llm-client';
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.LITELLM_API_KEY || '';
-const IMAGE_MODEL = 'gemini-3-pro-image-preview';
-const IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`;
+// API Keys
+const KIE_AI_API_KEY = process.env.KIE_AI_API_KEY || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
+
+// kie.ai API configuration (primary)
+const KIE_API_BASE = 'https://api.kie.ai/api/v1';
+const KIE_MODEL = 'nano-banana-pro';
+
+// Google API configuration (fallback)
+// Gemini 3 Pro Image (2026年1月リリース)
+const GOOGLE_IMAGE_MODEL = 'gemini-3-pro-image-preview';
+const GOOGLE_IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_IMAGE_MODEL}:generateContent`;
 
 // Result types
 export type ImageGenerationResult = {
@@ -15,11 +29,35 @@ export type ImageGenerationResult = {
   format: 'png' | 'jpeg';
   isFallback: boolean;
   errorMessage?: string;
+  provider?: 'kie.ai' | 'google';
 };
 
 export type ThumbnailResult = ImageGenerationResult & {
   catchphrase?: string;
 };
+
+// kie.ai API response types
+interface KieTaskResponse {
+  code: number;
+  msg?: string;
+  message?: string;
+  data?: {
+    taskId: string;
+  };
+}
+
+interface KieStatusResponse {
+  code: number;
+  data?: {
+    taskId: string;
+    state: string;
+    status?: string;
+    resultJson?: string;
+    url?: string;
+    failMsg?: string;
+    error?: string;
+  };
+}
 
 // Default thumbnail prompt template (from Rapid-Note2)
 const DEFAULT_THUMBNAIL_TEMPLATE = `[役割] Note.comアイキャッチ画像のデザイナー / タイポグラファー
@@ -64,12 +102,15 @@ white stroke, sticker outline, thick white border, harsh cutout edges,
 読めない文字、誤字、余計な文章追加、背景ごちゃごちゃ、別人化、手の崩れ、ロゴの勝手な生成`;
 
 export class ImageGenerator {
-  private apiKey: string;
+  private kieApiKey: string;
+  private googleApiKey: string;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || GOOGLE_API_KEY;
-    if (!this.apiKey) {
-      console.warn('Google API key not configured for image generation');
+  constructor(kieApiKey?: string, googleApiKey?: string) {
+    this.kieApiKey = kieApiKey || KIE_AI_API_KEY;
+    this.googleApiKey = googleApiKey || GOOGLE_API_KEY;
+
+    if (!this.kieApiKey && !this.googleApiKey) {
+      console.warn('No API keys configured for image generation (KIE_AI_API_KEY or GOOGLE_API_KEY)');
     }
   }
 
@@ -84,7 +125,7 @@ export class ImageGenerator {
     const cleanBody = body.replace(/<[^>]+>/g, '').slice(0, 1000);
     const outline = template || DEFAULT_THUMBNAIL_TEMPLATE;
 
-    const systemPrompt = `あなたはNanoBanana Pro (gemini-3-pro-image-preview) を使いこなすプロのプロンプトエンジニアです。
+    const systemPrompt = `あなたはNanoBanana Pro を使いこなすプロのプロンプトエンジニアです。
 以下の記事情報とアウトライン（設計図）を元に、画像生成AIに入力するための「最終的な画像生成プロンプト」を作成してください。
 
 NanoBanana Proは以下の能力を持っています：
@@ -98,7 +139,7 @@ NanoBanana Proは以下の能力を持っています：
 3. 特に「日本語テキストの描画」に関する指示を明確に含めてください。
 
 出力形式：
-NanoBanana Proに入力するプロンプト文字列のみを出力してください。
+プロンプト文字列のみを出力してください。
 説明や前置きは不要です。`;
 
     const userPrompt = `
@@ -132,7 +173,7 @@ ${outline}
     articleTitle: string
   ): Promise<string> {
     const systemPrompt = `あなたはブログ記事の挿絵（イメージ画像）を作成するプロンプトエンジニアです。
-NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクション内容に合った抽象的で高品質な画像を生成するためのプロンプトを作成してください。
+NanoBanana Pro を使用して、記事のセクション内容に合った抽象的で高品質な画像を生成するためのプロンプトを作成してください。
 
 指示：
 - テキストや文字は画像に含めないでください（No text）。
@@ -160,17 +201,139 @@ NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクシ
   }
 
   /**
-   * Call NanoBanana Pro REST API to generate image
+   * Generate image using kie.ai API (primary provider)
+   * Cost: $0.09/image
    */
-  async generateImageWithAPI(
+  private async generateWithKieAI(
+    prompt: string,
+    options?: {
+      aspectRatio?: '16:9' | '1:1' | '4:3';
+      resolution?: '1K' | '2K';
+    }
+  ): Promise<Buffer> {
+    if (!this.kieApiKey) {
+      throw new Error('KIE_AI_API_KEY not configured');
+    }
+
+    const aspectRatio = options?.aspectRatio || '16:9';
+    const resolution = options?.resolution || '2K';
+
+    // Step 1: Create task
+    const createTaskUrl = `${KIE_API_BASE}/jobs/createTask`;
+    const requestBody = {
+      model: KIE_MODEL,
+      input: {
+        prompt,
+        aspect_ratio: aspectRatio,
+        resolution,
+        output_format: 'png',
+      },
+    };
+
+    console.log('[kie.ai] Creating image generation task...');
+
+    const createResponse = await fetch(createTaskUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.kieApiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      throw new Error(`kie.ai task creation failed (${createResponse.status}): ${errorText}`);
+    }
+
+    const createResult: KieTaskResponse = await createResponse.json();
+
+    if (createResult.code !== 200 || !createResult.data?.taskId) {
+      throw new Error(`kie.ai task rejected: ${createResult.msg || createResult.message || 'Unknown error'}`);
+    }
+
+    const taskId = createResult.data.taskId;
+    console.log(`[kie.ai] Task created: ${taskId}`);
+
+    // Step 2: Poll for completion
+    const maxAttempts = 60; // 5 minutes max (60 * 5s)
+    let imageUrl: string | undefined;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // 5s interval
+
+      const pollUrl = `${KIE_API_BASE}/jobs/recordInfo?taskId=${taskId}`;
+      const pollResponse = await fetch(pollUrl, {
+        headers: { Authorization: `Bearer ${this.kieApiKey}` },
+      });
+
+      if (!pollResponse.ok) {
+        console.warn(`[kie.ai] Poll failed (attempt ${attempt + 1})`);
+        continue;
+      }
+
+      const pollResult: KieStatusResponse = await pollResponse.json();
+      const data = pollResult.data;
+
+      if (!data) continue;
+
+      const status = (data.state || data.status || '').toUpperCase();
+      console.log(`[kie.ai] Status: ${status} (attempt ${attempt + 1})`);
+
+      if (status === 'SUCCESS' || status === 'SUCCEEDED' || status === 'COMPLETED') {
+        // Extract URL from resultJson or direct field
+        if (data.resultJson) {
+          try {
+            const resObj = JSON.parse(data.resultJson);
+            if (resObj.resultUrls && Array.isArray(resObj.resultUrls) && resObj.resultUrls.length > 0) {
+              imageUrl = resObj.resultUrls[0];
+            } else {
+              imageUrl = resObj.url || resObj.imageUrl;
+            }
+          } catch (e) {
+            console.warn('[kie.ai] Failed to parse resultJson');
+          }
+        }
+
+        if (!imageUrl) {
+          imageUrl = data.url;
+        }
+
+        break;
+      } else if (status === 'FAIL' || status === 'FAILED') {
+        throw new Error(`kie.ai task failed: ${data.failMsg || data.error || 'Unknown error'}`);
+      }
+    }
+
+    if (!imageUrl) {
+      throw new Error('kie.ai: Timed out waiting for image generation');
+    }
+
+    // Step 3: Download image
+    console.log('[kie.ai] Downloading generated image...');
+    const imageResponse = await fetch(imageUrl);
+
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image from kie.ai: ${imageResponse.status}`);
+    }
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    return Buffer.from(imageBuffer);
+  }
+
+  /**
+   * Generate image using Google API (fallback provider)
+   * Cost: $0.134/image
+   */
+  private async generateWithGoogleAPI(
     prompt: string,
     options?: {
       aspectRatio?: '16:9' | '1:1' | '4:3';
       referenceImageUrl?: string;
     }
   ): Promise<Buffer> {
-    if (!this.apiKey) {
-      throw new Error('API key not configured');
+    if (!this.googleApiKey) {
+      throw new Error('GOOGLE_API_KEY not configured');
     }
 
     const aspectRatio = options?.aspectRatio || '16:9';
@@ -216,11 +379,13 @@ NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクシ
       },
     };
 
-    const response = await fetch(IMAGE_API_URL, {
+    console.log('[Google API] Generating image...');
+
+    const response = await fetch(GOOGLE_IMAGE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': this.apiKey,
+        'x-goog-api-key': this.googleApiKey,
       },
       body: JSON.stringify(requestBody),
     });
@@ -260,6 +425,43 @@ NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクシ
   }
 
   /**
+   * Generate image with kie.ai as primary, Google API as fallback
+   */
+  async generateImageWithAPI(
+    prompt: string,
+    options?: {
+      aspectRatio?: '16:9' | '1:1' | '4:3';
+      referenceImageUrl?: string;
+    }
+  ): Promise<Buffer> {
+    // For backward compatibility, check if only old-style API key was provided
+    if (!this.kieApiKey && !this.googleApiKey) {
+      throw new Error('API key not configured');
+    }
+
+    // Try kie.ai first (primary, 33% cheaper)
+    if (this.kieApiKey) {
+      try {
+        return await this.generateWithKieAI(prompt, {
+          aspectRatio: options?.aspectRatio,
+        });
+      } catch (error) {
+        console.warn('[kie.ai] Failed, falling back to Google API:', error);
+
+        // Fallback to Google API
+        if (this.googleApiKey) {
+          return await this.generateWithGoogleAPI(prompt, options);
+        }
+
+        throw error;
+      }
+    }
+
+    // If no kie.ai key, use Google API directly
+    return await this.generateWithGoogleAPI(prompt, options);
+  }
+
+  /**
    * Generate a thumbnail image for an article
    */
   async generateThumbnail(
@@ -289,6 +491,7 @@ NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクシ
         promptUsed: imagePrompt,
         format: 'png',
         isFallback: false,
+        provider: this.kieApiKey ? 'kie.ai' : 'google',
       };
     } catch (error) {
       console.error('Thumbnail generation failed:', error);
@@ -330,6 +533,7 @@ NanoBanana Pro (gemini-3-pro-image-preview) を使用して、記事のセクシ
         promptUsed: imagePrompt,
         format: 'png',
         isFallback: false,
+        provider: this.kieApiKey ? 'kie.ai' : 'google',
       };
     } catch (error) {
       console.error('Section image generation failed:', error);

@@ -75,25 +75,27 @@
 
 記事生成、分析、画像生成を行う非同期処理フローです。
 
-**SEO戦略駆動型7フェーズパイプライン:**
+**Stream A: 記事生成エンジン（実装済み）** → [完全仕様書](./04_StreamA_Specification.md)
 
-| Phase | 処理 | ツール |
-|-------|------|--------|
-| A | プロダクト理解 | Firecrawl / Jina Reader / LLM対話 |
-| B | 購買思考推論 | LLM |
-| C | キーワード調査 | Keywords Everywhere / DataForSEO |
-| D | 競合/SERP分析 | Tavily + LLM |
-| E | 記事クラスター設計 | LLM |
-| F | 個別記事生成 | Gemini 3.0 Pro |
-| G | パフォーマンス最適化 | GSC連携（Phase 10） |
+6ステップパイプラインで高品質な記事を自動生成：
 
-- **Text Gen:** **Gemini 3.0 Pro**（LiteLLMプロキシ経由、ソフトコーディング）
-- **Search/競合調査:** **Tavily API** → LLM解釈
-- **Keyword Research:** Keywords Everywhere / DataForSEO（Phase C）
-- **Scraping:** **Firecrawl + Jina Reader**（フォールバック）
-- **Image:** **Nanobana Pro**
+| Step | 処理 | ツール | 状態 |
+|------|------|--------|------|
+| 1 | Research（リサーチ） | Tavily 3段階検索 | ✅ |
+| 2 | Outline（構成生成） | LLM | ✅ |
+| 3 | Content（本文生成） | LLM | ✅ |
+| 4 | Meta Description | LLM | ✅ |
+| 5 | Thumbnail（サムネイル） | kie.ai / Google | ✅ |
+| 6 | Section Images（挿絵） | kie.ai / Google | ✅ |
+
+**技術スタック:**
+- **LLM:** **Gemini 2.0 Flash**（LiteLLMプロキシ経由、ソフトコーディング）
+- **Search/競合調査:** **Tavily API**（3段階マルチフェーズ検索）
+- **Scraping:** **Jina Reader API**
+- **Image:** **kie.ai NanoBanana Pro**（主要）+ **Google API**（フォールバック）
 - **Scheduler:** **Inngest**（スケジュール自動化）
-- **Prompt Intelligence:** Phase 15で効果分析・A/Bテスト
+
+**入力パターン:** 4モード対応（site_url / article_url / text / hybrid）
 
 **重要:** LLMモデルはソフトコーディング（環境変数で切り替え可能）とする。ハードコード禁止。
 
@@ -111,11 +113,12 @@ graph TD
         API --> Inngest[(Inngest Worker)]
     end
 
-    subgraph "AI Logic Layer"
-        Inngest -->|Analyze/Generate| LLM[Gemini 3.0 Pro<br/>※ソフトコーディング]
-        Inngest -->|Search/競合調査| Search[Tavily API]
-        Search -->|解釈| LLM
-        Inngest -->|Scraping| Scraper[Firecrawl/Jina Reader]
+    subgraph "Stream A: Article Generation Engine"
+        Inngest -->|Step 1| Tavily[Tavily API<br/>3段階検索]
+        Tavily -->|Research Data| LLM[Gemini 2.0 Flash<br/>※ソフトコーディング]
+        LLM -->|Step 2-4| Content[Outline/Content/<br/>Meta Description]
+        Content -->|Step 5-6| ImageGen[kie.ai NanoBanana Pro<br/>+ Google API]
+        Inngest -->|Scraping| Scraper[Jina Reader API]
     end
 
     subgraph "Infrastructure Layer (Hetzner VPS)"
@@ -127,6 +130,38 @@ graph TD
 
     Public((Readers)) -->|Access| Cloudflare
     Cloudflare -->|CDN/WAF| WP_Multi
+```
+
+### Stream A パイプライン詳細図
+
+```mermaid
+flowchart LR
+    subgraph Input["入力パターン"]
+        A1[site_url]
+        A2[article_url]
+        A3[text]
+        A4[hybrid]
+    end
+
+    subgraph Pipeline["6ステップパイプライン"]
+        B1[Step 1: Research<br/>Tavily 3-Phase]
+        B2[Step 2: Outline<br/>LLM]
+        B3[Step 3: Content<br/>LLM]
+        B4[Step 4: Meta<br/>LLM]
+        B5[Step 5: Thumbnail<br/>kie.ai/Google]
+        B6[Step 6: Section Images<br/>kie.ai/Google]
+
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6
+    end
+
+    subgraph Output["出力"]
+        C1[記事HTML]
+        C2[メタデータJSON]
+        C3[サムネイル画像]
+        C4[セクション画像x5]
+    end
+
+    Input --> Pipeline --> Output
 ```
 
 ---

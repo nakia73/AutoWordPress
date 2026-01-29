@@ -32,7 +32,7 @@ sequenceDiagram
     participant Analyzer as AI Worker (Product Analysis)
     participant Tavily as Tavily Search API
     participant Scraper as Firecrawl/Jina Reader
-    participant LLM as Gemini 3.0 Pro (LiteLLM)
+    participant LLM as Gemini 3 Flash (ソフトコーディング)
     participant Provisioner as WP Provisioning Worker
     participant Cloudflare as Cloudflare API
     participant VPS as Hetzner VPS
@@ -109,8 +109,8 @@ sequenceDiagram
     participant Writer as AI Worker (Writer)
     participant DB as Supabase (PostgreSQL)
     participant Tavily as Tavily Search API
-    participant LLM as Gemini 3.0 Pro (LiteLLM)<br/>※ソフトコーディング
-    participant ImageGen as Nanobana Pro
+    participant LLM as Gemini 3 Flash<br/>※ソフトコーディング
+    participant ImageGen as kie.ai NanoBanana Pro
     participant UserWP as WordPress Multisite
 
     Scheduler->>NextAPI: Trigger: Generate Articles (Auth Header)
@@ -127,24 +127,44 @@ sequenceDiagram
     Writer->>DB: 記事クラスター情報取得 (Keyword, Stage)
 
     rect rgb(240, 248, 255)
-        note right of Writer: Research & Planning
-        Writer->>Tavily: 検索実行 (Trends, Competitors)
-        Tavily-->>Writer: 検索結果（生データ）
+        note right of Writer: Step 1: Research (3-Phase Search)
+        Writer->>Tavily: NEWS検索 (最新トレンド)
+        Tavily-->>Writer: ニュース結果
+        Writer->>Tavily: SNS検索 (ユーザー声)
+        Tavily-->>Writer: SNS結果
+        Writer->>Tavily: OFFICIAL検索 (公式情報)
+        Tavily-->>Writer: 公式情報結果
         Note over Writer,LLM: ※必須: 検索結果をLLMで解釈
+    end
+
+    rect rgb(248, 248, 255)
+        note right of Writer: Step 2: Outline Generation
         Writer->>LLM: 検索結果を解釈 + 構成案作成 (H2, H3)
+        LLM-->>Writer: ArticleOutline (JSON)
     end
 
     rect rgb(255, 248, 240)
-        note right of Writer: Writing & Editing
-        Writer->>LLM: 本文執筆 (with Reference)
-        Writer->>LLM: 推敲・導線チェック
-        LLM-->>Writer: 完成記事 (HTML/Markdown)
+        note right of Writer: Step 3: Content Generation
+        Writer->>LLM: 本文執筆 (with Research & Outline)
+        LLM-->>Writer: 完成記事 (HTML)
+    end
+
+    rect rgb(255, 255, 240)
+        note right of Writer: Step 4: Meta Description
+        Writer->>LLM: メタディスクリプション生成 (160文字)
+        LLM-->>Writer: Meta Description
     end
 
     rect rgb(240, 255, 240)
-        note right of Writer: Media Generation
-        Writer->>ImageGen: アイキャッチ画像生成
-        ImageGen-->>Writer: 画像URL
+        note right of Writer: Step 5: Thumbnail Generation
+        Writer->>ImageGen: アイキャッチ画像生成 (kie.ai NanoBanana Pro)
+        ImageGen-->>Writer: 画像データ (1024x1024)
+    end
+
+    rect rgb(240, 255, 248)
+        note right of Writer: Step 6: Section Images
+        Writer->>ImageGen: H2セクション画像生成 (最大5枚)
+        ImageGen-->>Writer: セクション画像データ
     end
 
     rect rgb(255, 240, 245)
@@ -155,7 +175,98 @@ sequenceDiagram
     end
 ```
 
-## 3. ミドルエンドに関する補足 (Architecture Decision)
+## 3. Claude Batch API 記事生成フロー（標準フロー）
+
+**重要:** Claude APIを使用する場合、1記事の生成でも複数記事でも、**常にBatch APIを使用**します。
+ストリーミングAPIや同期APIは使用しません。これにより**50%のコスト削減**を実現します。
+
+詳細仕様: [05_Claude_Batch_API.md](./05_Claude_Batch_API.md)
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as Inngest Cron
+    participant NextAPI as Next.js API Routes
+    participant DB as Supabase (PostgreSQL)
+    participant BatchClient as ClaudeBatchClient
+    participant Claude as Anthropic Batches API
+    participant ImageGen as kie.ai NanoBanana Pro
+    participant UserWP as WordPress Multisite
+
+    Note over Scheduler,UserWP: ※1記事でも複数記事でも同じフロー（Batch API標準採用）
+
+    Scheduler->>NextAPI: Trigger: Generate Articles
+    NextAPI->>DB: 生成対象の記事を取得
+    DB-->>NextAPI: ArticleBatchRequest[]
+
+    rect rgb(240, 248, 255)
+        note right of BatchClient: Step 1: バッチ作成（1記事でもバッチ）
+        NextAPI->>BatchClient: createArticleBatchRequests()
+        BatchClient->>Claude: POST /v1/messages/batches
+        Claude-->>BatchClient: batchId (msgbatch_xxx)
+        BatchClient->>DB: BatchJob保存 (status: processing)
+        Note over BatchClient: ※50%コスト削減が自動適用
+    end
+
+    rect rgb(248, 248, 255)
+        note right of BatchClient: Step 2: 完了待機 (非同期)
+        loop Polling (60秒間隔)
+            BatchClient->>Claude: GET /v1/messages/batches/{id}
+            Claude-->>BatchClient: processing_status
+            Note over BatchClient: in_progress → 継続
+            Note over BatchClient: ended → 完了
+        end
+        Note over BatchClient: 典型的な処理時間: 数分〜1時間
+    end
+
+    rect rgb(255, 248, 240)
+        note right of BatchClient: Step 3: 結果取得
+        BatchClient->>Claude: GET results_url (JSONL)
+        Claude-->>BatchClient: BatchResultItem[]
+        BatchClient->>DB: 記事コンテンツ保存
+    end
+
+    rect rgb(240, 255, 240)
+        note right of NextAPI: Step 4: 画像生成
+        loop For Each Article
+            NextAPI->>ImageGen: Thumbnail + Section Images
+            ImageGen-->>NextAPI: 画像データ
+            NextAPI->>DB: 画像URL更新
+        end
+    end
+
+    rect rgb(255, 240, 245)
+        note right of NextAPI: Step 5: WordPress投稿
+        loop For Each Article
+            NextAPI->>UserWP: REST API: 投稿
+            UserWP-->>NextAPI: Post ID
+            NextAPI->>DB: WP ID紐付け
+        end
+    end
+
+    NextAPI->>DB: BatchJob status: completed
+```
+
+### API選択方針
+
+| API種別 | 使用 | 理由 |
+|--------|------|------|
+| **Message Batches API** | ✅ 標準採用 | 50%コスト削減、非同期処理に最適 |
+| Messages API（同期） | ❌ 不使用 | コストが2倍 |
+| Messages API（ストリーミング） | ❌ 不使用 | リアルタイム応答は不要 |
+
+### コスト比較（月間100記事）
+
+| 項目 | 同期/ストリーミングAPI | Batch API | 削減 |
+|------|----------------------|-----------|------|
+| 入力トークン | $0.40 | $0.20 | 50% |
+| 出力トークン | $10.00 | $5.00 | 50% |
+| **合計** | **$10.40** | **$5.20** | **$5.20** |
+
+※ claude-haiku-4-5使用時
+
+---
+
+## 4. ミドルエンドに関する補足 (Architecture Decision)
 
 ユーザー様からのご質問「ミドルエンドは配置しないのか？」に対する回答とアーキテクチャの意図です。
 

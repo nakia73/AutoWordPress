@@ -398,8 +398,8 @@ LiteLLM の代わりに Google AI Studio を直接使用することもできま
    - 表示された API キーをメモ
 
 3. **環境変数設定時の注意:**
-   - `LITELLM_API_KEY` に Google AI の API キーを設定
-   - `LLM_MODEL` は `gemini/gemini-2.0-flash-exp` のまま
+   - `GEMINI_API_KEY` に Google AI の API キーを設定
+   - `LLM_MODEL` は `gemini-3-flash` を推奨（デフォルト）
 
 ---
 
@@ -975,9 +975,10 @@ NEXT_PUBLIC_STRIPE_PRO_PRICE_ID="price_..."
 # ============================================
 # AI/LLM (Phase 2)
 # ============================================
-# LiteLLM ダッシュボードまたは Google AI Studio から取得
-LITELLM_API_KEY="..."
-LLM_MODEL="gemini/gemini-2.0-flash-exp"
+# Google AI Studio または Anthropic Console から取得
+GEMINI_API_KEY="AIza..."
+ANTHROPIC_API_KEY="sk-ant-..."
+LLM_MODEL="gemini-3-flash"
 LLM_TIMEOUT_SECONDS=30
 
 # Tavily ダッシュボードから取得
@@ -986,9 +987,9 @@ TAVILY_API_KEY="tvly-..."
 # Keywords API (オプション - 未使用なら空でOK)
 KEYWORDS_API_KEY=""
 
-# NanoBanana Pro (オプション - 画像生成)
-# 注: 実際にはGOOGLE_API_KEYを使用（gemini-3-pro-image-preview）
-NANOBANANA_API_KEY=""
+# 画像生成 (kie.ai primary, Google fallback)
+KIE_AI_API_KEY="..."
+GOOGLE_API_KEY="AIza..."  # Gemini 3 Pro Image (gemini-3-pro-image-preview)
 
 # ============================================
 # Inngest (Background Jobs)

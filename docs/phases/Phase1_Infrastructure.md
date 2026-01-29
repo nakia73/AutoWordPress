@@ -162,4 +162,4 @@ POSTHOG_KEY="phc_..."
 | IR-NEW-026 | Cloudflare環境変数未使用 | 🟡 Low | ⏭️ スキップ - ワイルドカードDNS使用 |
 | IR-NEW-028 | 監視機能未実装（Sentry/PostHog） | 🟡 Low | ⬜ 未完了 - MVP後対応 |
 
-詳細は [10_Comprehensive_Critical_Issues_Report.md](../architecture/10_Comprehensive_Critical_Issues_Report.md) を参照
+詳細は [08_Unified_Issues_Report.md](../architecture/08_Unified_Issues_Report.md) を参照

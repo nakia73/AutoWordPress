@@ -1,0 +1,17 @@
+# Sample Keywords for Quality Evaluation
+# Format: keyword,type,language
+# Generated articles will be evaluated using StreamA_Quality_Checklist.md
+
+# Japanese Articles (5)
+タスク管理ツール 比較 2025,article,ja
+プロジェクト管理 ベストプラクティス,article,ja
+リモートワーク 生産性向上 コツ,article,ja
+アジャイル開発とは,glossary,ja
+タスク管理 よくある質問,faq,ja
+
+# English Articles (5)
+Project Management Tools Comparison 2025,article,en
+Remote Team Collaboration Best Practices,article,en
+Agile vs Waterfall Methodology,article,en
+What is Kanban,glossary,en
+Task Management FAQ,faq,en

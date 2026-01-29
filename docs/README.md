@@ -58,12 +58,11 @@ docs/
 │   ├── 02_Backend_Database.md         # バックエンド・DB仕様
 │   ├── 03_Infrastructure_Ops.md       # インフラ・運用仕様
 │   ├── 04_AI_Pipeline.md              # AIパイプライン仕様
+│   ├── 04_StreamA_Specification.md    # Stream A 記事生成モジュール完全仕様書
 │   ├── 05_Sequence_Diagrams.md        # シーケンス図
 │   ├── 06_Multisite_feasibility.md    # Multisite採用検討
 │   ├── 07_WordPress_Multisite_Guide.md    # Multisite実装ガイド
-│   ├── 08_Integration_Risk_Report.md      # 整合性リスクレポート
-│   ├── 09_Critical_Issues_Report.md       # 致命的問題点レポート（10イテレーション）
-│   └── 10_Comprehensive_Critical_Issues_Report.md  # 包括的問題点レポート（50イテレーション）
+│   └── 08_Unified_Issues_Report.md        # 統合問題点レポート（全問題を集約）
 │
 ├─────────────────────────────────────────────────────────────────
 │  【開発フェーズ】phases/

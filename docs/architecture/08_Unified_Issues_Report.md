@@ -6,10 +6,12 @@
 > **分析手法:** First Principles Thinking × 50 Iteration Deep Analysis + Code Review
 >
 > **本レポートについて:**
-> このドキュメントは以下のレポートを統合したマスター問題点レポートです。
-> - 旧 08_Integration_Risk_Report.md（モジュール間統合リスク）
-> - 旧 09_Critical_Issues_Report.md（10イテレーション分析）
-> - 旧 10_Comprehensive_Critical_Issues_Report.md（50イテレーション分析）
+> このドキュメントは、プロジェクトの問題点・リスク・課題を統合したマスターレポートです。
+> 以下の分析を統合しています：
+> - モジュール間統合リスク分析
+> - 10イテレーション分析（コアバリュー・矛盾検出）
+> - 50イテレーション分析（原子分解・深層分析）
+> - 実装レビュー分析（コードとドキュメントの整合性）
 >
 > **新たな問題発見時は本レポートに追記してください。**
 
@@ -17,7 +19,7 @@
 
 ## 概要
 
-本レポートは、09_Critical_Issues_Report（10イテレーション分析）を拡張し、50イテレーションによる徹底的な原子分解分析を実施した結果です。
+本レポートは、プロジェクトの全ての問題点・リスクを一元管理するマスターレポートです。50イテレーションによる徹底的な原子分解分析と、実装コードレビューの結果を統合しています。
 
 **分析対象:** 全32ドキュメント（architecture/10件 + phases/16件 + root/6件）
 **分析構造:**
@@ -978,41 +980,35 @@ Dashboard → "記事を編集" → WP管理画面（SSO）→ 編集
 
 ---
 
-### 🟠 IR-NEW-003: Phase A-C キーワード調査API連携未確認
+### ✅ IR-NEW-003: Phase A-C キーワード調査API連携 - **解決済み**
+
+> **解決日:** 2026-01-29
+> **対応内容:** MVPではLLMベースのキーワード生成で代替。Stream A実装でarticle-input-handler.tsに統合
 
 **発生箇所:**
 - `docs/architecture/04_AI_Pipeline.md:91`: 「Keywords Everywhere or DataForSEO API（$50/月）」を使用すべき
 - `app/src/lib/ai/product-analyzer.ts`: 外部キーワード調査APIの直接呼び出しが不明
 
-**影響:**
-- Phase C（キーワード調査）の品質がLLMのみに依存する可能性
-- 検索ボリューム・難易度データの信頼性が低下
-
-**推奨対応:**
-1. Keywords Everywhere / DataForSEO API統合の実装状況を確認
-2. MVP では LLM ベースのキーワード提案で代替する場合、ドキュメントを更新
+**対応:**
+- MVPではLLMベースのキーワード候補生成で代替（article-input-handler.ts実装済み）
+- 外部キーワード調査APIはMVP後に検討
+- ドキュメントは現状（LLMベース）に合わせて更新済み
 
 ---
 
-### 🟠 IR-NEW-004: Phase F パイプラインステップ数不整合
+### ✅ IR-NEW-004: Phase F パイプラインステップ数不整合 - **解決済み**
+
+> **解決日:** 2026-01-29
+> **対応内容:** 04_AI_Pipeline.mdを6ステップパイプラインに更新。Editorステップは将来対応
 
 **発生箇所:**
 - `docs/architecture/04_AI_Pipeline.md:154-179`: Phase Fに4サブフロー（Planner, Writer, Editor, Illustrator）
 - `app/src/lib/ai/article-generator.ts`: 6ステップ実装（Research, Outline, Content, MetaDescription, Thumbnail, SectionImages）
 
-**差分:**
-| ドキュメント | 実装 |
-|-------------|------|
-| - | Step 1: Research（ドキュメント未記載） |
-| Planner | Step 2: Outline |
-| Writer | Step 3: Content |
-| Editor | ❌ 未実装 |
-| - | Step 4: MetaDescription（ドキュメント未記載） |
-| Illustrator | Step 5-6: Thumbnail + SectionImages |
-
-**推奨対応:**
-1. `04_AI_Pipeline.md` を実装に合わせて更新（Research, MetaDescription 追加）
-2. Editor（推敲）ステップを実装するか、ドキュメントから削除するか決定
+**対応:**
+- 04_AI_Pipeline.mdに6ステップパイプラインを記載済み
+- Editor（推敲）ステップは将来対応として整理（品質向上フェーズ）
+- 現行6ステップ: Research → Outline → Content → MetaDescription → Thumbnail → SectionImages
 
 ---
 
@@ -1043,20 +1039,23 @@ Dashboard → "記事を編集" → WP管理画面（SSO）→ 編集
 
 ---
 
-### 🟠 IR-NEW-006: LLMモデル設定の不整合
+### ✅ IR-NEW-006: LLMモデル設定の不整合 - **解決済み**
+
+> **解決日:** 2026-01-29
+> **最終更新:** 2026-01-29（Gemini 3 / Claude 4.5 対応）
+> **対応内容:** Gemini 3 Flash を標準採用としてドキュメントを統一
 
 **発生箇所:**
-- `docs/architecture/04_AI_Pipeline.md:263`: 「Gemini 3.0 Pro を標準採用」
-- `docs/architecture/04_AI_Pipeline.md:408`: `LLM_MODEL=gemini-2.0-flash-exp`
-- `app/src/lib/ai/llm-client.ts:6`: `gemini/gemini-2.0-flash-exp`（デフォルト）
+- `docs/architecture/04_AI_Pipeline.md`: LLM設定セクション
+- `app/src/lib/ai/llm-client.ts`: モデル定義
+- `.env` / `.env.example`: 環境変数
 
-**影響:**
-- 採用モデルの認識が統一されていない
-- コスト・品質見積もりに影響
-
-**推奨対応:**
-1. 標準採用モデルを明確に決定（gemini-2.0-flash-exp or gemini-3.0-pro）
-2. 全ドキュメントと実装を統一
+**対応:**
+- **Gemini 3 Flash**（`gemini-3-flash-preview`）を現行標準として確定
+- サポートモデル:
+  - Google: `gemini-3-flash`, `gemini-3-pro`, `gemini-3-pro-image-preview`
+  - Anthropic: `claude-haiku-4-5`, `claude-sonnet-4-5`, `claude-opus-4-5`
+- 環境変数で切り替え可能（ソフトコーディング原則）
 
 ---
 
@@ -1078,19 +1077,19 @@ this.baseUrl = options?.baseUrl || process.env.LITELLM_BASE_URL || 'https://api.
 
 ---
 
-### 🟡 IR-NEW-008: Editor（推敲）ステップ未実装
+### 🟡 IR-NEW-008: Editor（推敲）ステップ未実装 - **将来対応**
+
+> **決定日:** 2026-01-29
+> **方針:** MVP後の品質向上フェーズで実装を検討
 
 **発生箇所:**
 - `docs/architecture/04_AI_Pipeline.md:167-169`: Editor（推敲）ステップを定義
 - `app/src/lib/ai/article-generator.ts`: 該当ステップなし
 
-**影響:**
-- 記事品質の最終チェックプロセスが欠落
-- 文章の流れ、重複チェック、トーン統一が行われない
-
-**推奨対応:**
-1. Editor ステップを実装（MVP 後でも可）
-2. または、ドキュメントから削除し「Writer で一括生成」に変更
+**対応方針:**
+- MVPでは6ステップパイプライン（Editorなし）で運用
+- 品質はContent生成時のLLMプロンプトで担保
+- 将来の品質向上フェーズでEditor（推敲・校正）を追加検討
 
 ---
 
@@ -1234,12 +1233,12 @@ export type ScheduleGenerationDetails = {
 |----|------|--------|---------|
 | IR-NEW-001 | Zustand未実装 | 🟠 | フロントエンド |
 | IR-NEW-002 | コンポーネント構造不一致 | 🟡 | フロントエンド |
-| IR-NEW-003 | キーワード調査API連携不明 | 🟠 | AIパイプライン |
-| IR-NEW-004 | Phase Fステップ数不整合 | 🟠 | AIパイプライン |
+| IR-NEW-003 | ~~キーワード調査API連携不明~~ | ✅解決 | AIパイプライン (2026-01-29) |
+| IR-NEW-004 | ~~Phase Fステップ数不整合~~ | ✅解決 | AIパイプライン (2026-01-29) |
 | IR-NEW-005 | ~~Fact Check実装/ドキュメント矛盾~~ | ✅解決 | AIパイプライン |
-| IR-NEW-006 | LLMモデル設定不整合 | 🟠 | AIパイプライン |
+| IR-NEW-006 | ~~LLMモデル設定不整合~~ | ✅解決 | AIパイプライン (2026-01-29) |
 | IR-NEW-007 | LITELLM_BASE_URL未活用 | 🟡 | 設定 |
-| IR-NEW-008 | Editorステップ未実装 | 🟡 | AIパイプライン |
+| IR-NEW-008 | Editorステップ未実装 | 🟡将来 | AIパイプライン |
 | IR-NEW-009 | HTTP 202 Status未実装 | 🟠 | API Routes |
 | IR-NEW-010 | Modeパラメータハードコード | 🟠 | API Routes |
 | IR-NEW-011 | articlesPerRunロジック未実装 | 🟠 | API Routes |
@@ -1523,6 +1522,7 @@ npm install ssh2 @types/ssh2  # ✅ 導入済み
 | 2026-01-27 | 2.3 | Block 8追加。MVP実装ギャップ総括。フェーズ別実装状況サマリー追加 |
 | 2026-01-27 | 2.4 | Block 8更新。アプリ実装完了（IR-NEW-021, IR-NEW-020, IR-NEW-025解決）。インフラ構築待ちステータスに更新 |
 | 2026-01-27 | 2.5 | ドキュメント整合性修正: WP_TOKEN_ENCRYPTION_KEY→ENCRYPTION_KEY。ESLint警告解消完了 |
+| 2026-01-29 | 2.6 | Stream A実装完了に伴う問題解決。IR-NEW-003/004/006を解決済みに更新。08/09レポート削除、08_Unified_Issues_Reportにリネーム |
 
 ---
 

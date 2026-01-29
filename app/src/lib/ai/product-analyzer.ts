@@ -4,6 +4,7 @@
 
 import { llmClient } from './llm-client';
 import { tavilyClient, RESEARCH_QUERIES } from './tavily-client';
+import { webScraper } from './web-scraper';
 import type {
   ProductAnalysisResult,
   PhaseAResult,
@@ -11,6 +12,8 @@ import type {
   PhaseCResult,
   PhaseDResult,
   PhaseEResult,
+  PersonaResult,
+  KeywordCandidateResult,
 } from '@/types';
 
 type AnalyzeOptions = {
@@ -112,8 +115,23 @@ Return as JSON:
 };
 
 export class ProductAnalyzer {
-  // Phase A: Product Analysis
+  // Phase A: Product Analysis (with optional URL scraping)
   async analyzeProduct(options: AnalyzeOptions): Promise<PhaseAResult> {
+    // Scrape URL if provided to get additional context
+    let scrapedContent = '';
+    if (options.productUrl) {
+      try {
+        console.log(`[ProductAnalyzer] Scraping product URL: ${options.productUrl}`);
+        const scraped = await webScraper.scrapeUrl(options.productUrl);
+        if (scraped.success && scraped.content) {
+          scrapedContent = `\n\nScraped Content from URL:\n${scraped.content.slice(0, 3000)}`;
+          console.log(`[ProductAnalyzer] Scraped ${scraped.content.length} characters`);
+        }
+      } catch (error) {
+        console.warn('[ProductAnalyzer] Failed to scrape URL:', error);
+      }
+    }
+
     const userPrompt = `
 Analyze this product:
 
@@ -121,11 +139,104 @@ Product Name: ${options.productName}
 Description: ${options.productDescription}
 ${options.productUrl ? `URL: ${options.productUrl}` : ''}
 ${options.userAnswers ? `Additional Info:\n${JSON.stringify(options.userAnswers, null, 2)}` : ''}
+${scrapedContent}
 
 Language: ${options.language || 'en'}
 `;
 
     return llmClient.jsonPrompt<PhaseAResult>(ANALYSIS_PROMPTS.PHASE_A, userPrompt);
+  }
+
+  // Generate detailed personas based on product analysis
+  async generatePersonas(
+    options: AnalyzeOptions,
+    phaseAResult: PhaseAResult
+  ): Promise<PersonaResult> {
+    const systemPrompt = `You are a user persona expert.
+Create detailed buyer personas for the product based on the analysis.
+
+Each persona should include:
+- Name (fictional but realistic)
+- Demographics (age, occupation, location)
+- Pain points (3-5 specific problems)
+- Goals (what they want to achieve)
+- How this product helps them
+
+Return as JSON:
+{
+  "personas": [
+    {
+      "name": "string",
+      "demographics": {
+        "age_range": "string",
+        "occupation": "string",
+        "location": "string"
+      },
+      "pain_points": ["string"],
+      "goals": ["string"],
+      "product_fit": "string"
+    }
+  ]
+}`;
+
+    const userPrompt = `
+Create 2-3 detailed buyer personas for:
+
+Product: ${options.productName}
+Target Audience: ${phaseAResult.target_audience}
+Value Proposition: ${phaseAResult.value_proposition}
+
+Language: ${options.language || 'en'}
+`;
+
+    return llmClient.jsonPrompt<PersonaResult>(systemPrompt, userPrompt);
+  }
+
+  // Generate keyword candidates based on personas and product
+  async generateKeywordCandidates(
+    options: AnalyzeOptions,
+    phaseAResult: PhaseAResult,
+    personaResult?: PersonaResult
+  ): Promise<KeywordCandidateResult> {
+    const personaContext = personaResult
+      ? `\nPersonas:\n${personaResult.personas.map((p) => `- ${p.name}: ${p.pain_points.join(', ')}`).join('\n')}`
+      : '';
+
+    const systemPrompt = `You are an SEO keyword strategist.
+Generate keyword candidates that align with the product and target personas.
+
+Categories to include:
+1. Problem-aware keywords (what problems users search for)
+2. Solution-aware keywords (what solutions users search for)
+3. Product-aware keywords (direct product searches)
+4. Comparison keywords (vs competitors)
+5. How-to keywords (tutorials and guides)
+
+Return as JSON:
+{
+  "keyword_candidates": [
+    {
+      "keyword": "string",
+      "category": "problem|solution|product|comparison|how-to",
+      "search_intent": "informational|transactional|navigational",
+      "priority": 1-5,
+      "rationale": "string"
+    }
+  ]
+}`;
+
+    const userPrompt = `
+Generate 15-20 keyword candidates for:
+
+Product: ${options.productName}
+Target Audience: ${phaseAResult.target_audience}
+Value Proposition: ${phaseAResult.value_proposition}
+${personaContext}
+
+Language: ${options.language || 'en'}
+`;
+
+    return llmClient.jsonPrompt<KeywordCandidateResult>(systemPrompt, userPrompt);
   }
 
   // Phase B: Purchase Funnel Analysis

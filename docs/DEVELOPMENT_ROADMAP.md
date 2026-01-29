@@ -8,158 +8,248 @@
 
 ---
 
-## ドキュメント構成
+## 開発方針: 3ストリーム並行開発
 
-本プロジェクトのドキュメントは以下の構造で管理されています。
+本プロジェクトは**3つの独立したストリーム**で並行開発を進めます。
+各ストリームはスタンドアローンで動作検証可能な状態を目指し、最終的に統合します。
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        開発ストリーム構成                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Stream M: Marketing          ◄── 開発と並列で継続的に実行          │
+│  ├── モックアップ作成                                                │
+│  ├── SNS/LP発信                                                     │
+│  └── コンセプト検証・フィードバック収集                               │
+│                                                                     │
+│  Stream A: Article Generation ◄── 最初に構築                        │
+│  ├── AI記事生成モジュール（スタンドアローン）                          │
+│  ├── プロダクト分析エンジン                                          │
+│  └── 表示用スタブUI                                                  │
+│                                                                     │
+│  Stream W: WordPress Setup    ◄── 次に構築                          │
+│  ├── VPS自動プロビジョニング                                         │
+│  ├── WordPress Multisite構築                                        │
+│  └── ブログ自動セットアップ                                          │
+│                                                                     │
+│  ─────────────────────────────────────────────────────────────────  │
+│                                                                     │
+│  Integration Phase            ◄── 統合フェーズ                       │
+│  ├── Stream A + Stream W 結合                                       │
+│  ├── 本番UI構築                                                      │
+│  └── MVP完成・リリース                                               │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### ストリーム間の依存関係
+
+```
+Stream M (Marketing) ─────────────────────────────────────────────────►
+                                                       ▲
+Stream A (Article)  ────────────────►                  │ フィードバック
+                                     ╲                 │
+                                      ╲                │
+Stream W (WordPress) ────────────────► Integration ────┘
+```
+
+- **Stream M**: 他ストリームと並列で常時実行
+- **Stream A → Integration**: 記事生成が動作確認できてから統合
+- **Stream W → Integration**: WPセットアップが動作確認できてから統合
+
+---
+
+## ドキュメント構成
 
 ```
 docs/
 ├── DEVELOPMENT_ROADMAP.md    # 本ドキュメント（開発全体の俯瞰）
 ├── architecture/             # 技術仕様書（HOW）
-│   ├── 00_Master_Architecture.md   # アーキテクチャ全体概要
-│   ├── 01_Frontend_Architecture.md # フロントエンド仕様
-│   ├── 02_Backend_Database.md      # バックエンド・DB仕様
-│   ├── 03_Infrastructure_Ops.md    # インフラ・運用仕様
-│   ├── 04_AI_Pipeline.md           # AI処理パイプライン仕様
-│   ├── 05_Sequence_Diagrams.md     # システムシーケンス図
-│   ├── 06_Multisite_feasibility.md # Multisite採用検討
-│   ├── 07_WordPress_Multisite_Guide.md # Multisite実装ガイド
-│   ├── 08_Integration_Risk_Report.md  # 整合性リスクレポート
-│   ├── 09_Critical_Issues_Report.md   # 致命的問題点レポート（10イテレーション）
-│   └── 10_Comprehensive_Critical_Issues_Report.md  # 包括的問題点レポート（50イテレーション）
-└── phases/                   # 開発フェーズ詳細（WHAT & WHEN）
-    ├── Phase0_Mockup.md      # モックアップ・集客
-    ├── Phase1_Infrastructure.md  # インフラ基盤構築
-    ├── ...
-    └── Phase15_PromptIntelligence.md
+│   ├── 00_Master_Architecture.md
+│   ├── 01_Frontend_Architecture.md
+│   ├── 02_Backend_Database.md
+│   ├── 03_Infrastructure_Ops.md
+│   ├── 04_AI_Pipeline.md
+│   └── ...
+└── phases/                   # ストリーム別フェーズ詳細
+    ├── StreamM_Marketing.md      # マーケティング（継続）
+    ├── StreamA_ArticleGen.md     # 記事生成モジュール
+    ├── StreamW_WordPress.md      # WordPressセットアップ
+    ├── Integration_MVP.md        # 統合・MVPリリース
+    └── Growth_*.md               # 成長フェーズ
 ```
-
-**ドキュメントの役割:**
-- **architecture/**: 技術的な「どう作るか」を定義（仕様書）
-- **phases/**: ビジネス的な「何をいつ作るか」を定義（計画書）
 
 ---
 
-## フェーズ一覧
+## Stream M: Marketing（マーケティング）
 
-### MVP開発フェーズ（Phase 0-6）【1ヶ月で完了目標】
+**目的:** コンセプト検証・認知獲得・フィードバック収集
 
-| Phase | 名称 | テーマ | 概要 | Week |
-|-------|------|--------|------|------|
-| [Phase 0](./phases/Phase0_Mockup.md) | Mockup | Visualization | SNSデモ動画でコンセプト反応検証 | Week 1前半 |
-| [Phase 0.5](./phases/Phase0.5_MVPBranding.md) | MVP Branding | Identity | ロゴ・アイコン作成、正式LP公開 | Week 1前半 |
-| [Phase 1](./phases/Phase1_Infrastructure.md) | Infrastructure + Auth | Foundation | VPS・SSL・Multisite・**認証基盤（Supabase Auth）** | Week 1 |
-| [Phase 2](./phases/Phase2_CoreAI.md) | Core AI | Intelligent Engine | プロダクト分析・記事生成・WordPress投稿 | Week 2 |
-| [Phase 3](./phases/Phase3_UserInterface.md) | User Interface | Onboarding & Control | オンボーディング・ダッシュボード | Week 3 |
-| [Phase 4](./phases/Phase4_Automation.md) | Automation | Hands-Free | **スケジュール自動化・通知（MVP必須）** | Week 3 |
-| [Phase 5](./phases/Phase5_Monetization.md) | Monetization | Sustainability | Stripe決済・サブスクリプション管理 | Week 4 |
-| [Phase 6](./phases/Phase6_MVPLaunch.md) | MVP Launch | Validation | ベータリリース・フィードバック収集 | Week 4 |
-| Phase 6.1 | UI Upgrade | Polish | MockupのリッチUIデザインをAppに移植 | Week 4+ |
+| Phase | タスク | 成果物 |
+|-------|--------|--------|
+| M-1 | モックアップ作成 | デモ動画、スクリーンショット |
+| M-2 | SNS発信開始 | X/Twitter投稿、反応分析 |
+| M-3 | LP公開 | ランディングページ、Waitlist |
+| M-4 | ブランディング | ロゴ、アイコン、カラースキーム |
+| M-5 | 継続発信 | 週次更新、開発進捗共有 |
 
-### 成長フェーズ（Phase 7-15）【ベータフィードバック後】
+**詳細:** [StreamM_Marketing.md](./phases/StreamM_Marketing.md)
 
-| Phase | 名称 | テーマ | 概要 |
-|-------|------|--------|------|
-| [Phase 7](./phases/Phase7_Visual.md) | Visual | Visual Appeal | AI画像生成（Nanobana Pro）|
-| [Phase 8](./phases/Phase8_CustomDomain.md) | Custom Domain | Brand Identity | 独自ドメイン接続・SSL自動発行 |
-| [Phase 9](./phases/Phase9_SSO.md) | SSO | Seamless Experience | ダッシュボード→WP管理画面のシームレスログイン |
-| [Phase 10](./phases/Phase10_GSCIntegration.md) | GSC Integration | Optimization | Google Search Console連携・AI自律改善 |
-| [Phase 11](./phases/Phase11_HeadlessEvaluation.md) | Headless Evaluation | Evolution | Headless WordPress化の妥当性評価 |
-| [Phase 12](./phases/Phase12_ModelSelection.md) | Model Selection | Flexibility | ユーザーによるLLMモデル選択機能 |
-| [Phase 13](./phases/Phase13_BrandIdentity.md) | Brand Evolution | Refinement | ブランド洗練・ガイドライン策定・グッズ連携 |
-| [Phase 14](./phases/Phase14_ReferralProgram.md) | Referral Program | Growth | リファラルプログラム実装 |
-| [Phase 15](./phases/Phase15_PromptIntelligence.md) | Prompt Intelligence | Analytics | プロンプトトレーサビリティ・効果分析・A/Bテスト |
+---
+
+## Stream A: Article Generation（記事生成モジュール）
+
+**目的:** AI記事生成エンジンをスタンドアローンで構築・検証
+
+| Phase | タスク | 成果物 |
+|-------|--------|--------|
+| A-1 | プロダクト分析エンジン | URL→商品情報抽出 |
+| A-2 | 記事生成コア | 商品情報→ブログ記事HTML |
+| A-3 | スタブUI作成 | 生成結果確認用シンプルUI |
+| A-4 | CLIツール | コマンドラインからの記事生成 |
+| A-5 | 品質検証 | 生成記事の品質評価・調整 |
+
+**依存関係:** なし（スタンドアローン）
+**出力:** 記事HTML + メタデータJSON
+**詳細:** [StreamA_ArticleGen.md](./phases/StreamA_ArticleGen.md)
+
+---
+
+## Stream W: WordPress Setup（WordPressセットアップ）
+
+**目的:** VPS・WordPress環境の自動構築をスタンドアローンで構築・検証
+
+| Phase | タスク | 成果物 |
+|-------|--------|--------|
+| W-1 | VPSプロビジョニング | Hetzner API連携、サーバー自動作成 |
+| W-2 | WordPress Multisite | 自動インストール、設定 |
+| W-3 | サイト作成API | ユーザー用サブサイト自動作成 |
+| W-4 | 記事投稿API | 外部からの記事投稿機能 |
+| W-5 | 動作検証 | E2Eテスト、信頼性確認 |
+
+**依存関係:** なし（スタンドアローン）
+**出力:** WordPress REST API エンドポイント
+**詳細:** [StreamW_WordPress.md](./phases/StreamW_WordPress.md)
+
+---
+
+## Integration Phase（統合フェーズ）
+
+**目的:** Stream A + Stream W を結合し、本番サービスとして完成
+
+| Phase | タスク | 成果物 |
+|-------|--------|--------|
+| I-1 | A↔W結合 | 記事生成→WP投稿の自動化 |
+| I-2 | 認証・ユーザー管理 | Supabase Auth統合 |
+| I-3 | 本番UI構築 | ダッシュボード、オンボーディング |
+| I-4 | 自動化・スケジューリング | Inngest統合、定期実行 |
+| I-5 | 決済統合 | Stripe連携 |
+| I-6 | MVP Launch | ベータリリース |
+
+**詳細:** [Integration_MVP.md](./phases/Integration_MVP.md)
+
+---
+
+## 成長フェーズ（Growth Phase）
+
+MVPリリース後、フィードバックに基づき優先順位を決定。
+
+| Phase | 名称 | 概要 |
+|-------|------|------|
+| G-1 | Visual | AI画像生成（Nanobana Pro）|
+| G-2 | Custom Domain | 独自ドメイン接続・SSL自動発行 |
+| G-3 | SSO | ダッシュボード→WP管理画面のシームレスログイン |
+| G-4 | GSC Integration | Google Search Console連携 |
+| G-5 | Model Selection | ユーザーによるLLMモデル選択 |
+| G-6 | Referral Program | リファラルプログラム |
+| G-7 | Prompt Intelligence | プロンプト効果分析・A/Bテスト |
 
 ---
 
 ## 開発進行の原則
 
-### 1. MVP First
-- Phase 0〜6 を最優先で完了
-- 「動く最小限」を早期にユーザーへ提供
+### 1. スタンドアローン優先
+- 各ストリームを独立して動作検証可能な状態まで構築
+- 依存関係を最小化し、並行開発を可能に
 
-### 2. フィードバック駆動
-- Phase 6以降はベータユーザーのフィードバックに基づき優先度決定
-- 「欲しい声が多い機能」から実装
+### 2. マーケティング並走
+- 開発と並行してモックアップ・発信を継続
+- 早期フィードバックを開発に反映
 
-### 3. 過剰設計の回避
+### 3. 段階的統合
+- 各モジュールの動作確認後に統合
+- 問題の切り分けを容易に
+
+### 4. 過剰設計の回避
 - 将来の仮定ではなく、現在の課題を解決
-- Phase 11（Headless化）は「必要になったら」検討
+- 「動く最小限」を早期に実現
 
 ---
 
-## 技術スタック概要（確定版）
+## 技術スタック概要
 
-詳細は [00_Master_Architecture.md](./architecture/00_Master_Architecture.md) および [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) を参照。
+詳細は [00_Master_Architecture.md](./architecture/00_Master_Architecture.md) を参照。
 
-| レイヤー | 技術 | 備考 |
-|---------|------|------|
-| Frontend | Next.js 16+, TypeScript, Tailwind CSS v4, Shadcn/UI, Framer Motion | |
-| Backend | Next.js API Routes, Prisma ORM | |
-| Auth | **Supabase Auth** | Google OAuth対応 |
-| Database | **Supabase (PostgreSQL)** + MariaDB (WP) | 2DB構成 |
-| Worker | **Inngest** | 長時間処理・自動リトライ |
-| AI | **Gemini 3.0 Pro** | LiteLLMプロキシ経由、ソフトコーディング |
-| Search | Tavily API, **Firecrawl + Jina Reader** | |
-| Image | Nanobana Pro | |
-| Storage | **Cloudflare R2** | エグレス無料 |
-| Payment | Stripe | |
-| Hosting | Vercel (App), **Hetzner VPS** (WordPress) | |
-| Monitoring | **UptimeRobot, Sentry, PostHog** | |
-| CDN/Security | Cloudflare | |
+### Stream A（記事生成）で使用
+| レイヤー | 技術 |
+|---------|------|
+| AI | Gemini 3.0 Pro（LiteLLM経由） |
+| Search | Tavily API, Firecrawl + Jina Reader |
+| Runtime | Node.js / TypeScript |
 
----
+### Stream W（WordPress）で使用
+| レイヤー | 技術 |
+|---------|------|
+| VPS | Hetzner Cloud API |
+| WordPress | Multisite + MariaDB |
+| Automation | SSH + WP-CLI |
 
-## スケーリングロードマップ
-
-詳細は [03_Infrastructure_Ops.md](./architecture/03_Infrastructure_Ops.md) を参照。
-
-| フェーズ | ユーザー規模 | 構成 |
-|---------|-------------|------|
-| MVP | 0-100社 | Single VPS ($24/mo) |
-| Growth | 100-500社 | Vertical Scaling ($48-96/mo) |
-| Scale | 500社+ | Horizontal Scaling (Multi-VPS) |
+### Integration Phase で使用
+| レイヤー | 技術 |
+|---------|------|
+| Frontend | Next.js 16+, Tailwind CSS v4, Shadcn/UI |
+| Backend | Next.js API Routes, Prisma ORM |
+| Auth | Supabase Auth |
+| Database | Supabase (PostgreSQL) |
+| Worker | Inngest |
+| Storage | Cloudflare R2 |
+| Payment | Stripe |
+| Hosting | Vercel |
 
 ---
 
 ## 関連ドキュメント
 
 ### 技術仕様書（Architecture）
-- [00. マスターアーキテクチャ](./architecture/00_Master_Architecture.md) - 全体設計方針
-- [01. フロントエンド](./architecture/01_Frontend_Architecture.md) - UI/UX、技術スタック
-- [02. バックエンド・DB](./architecture/02_Backend_Database.md) - API設計、データモデル
-- [03. インフラ・運用](./architecture/03_Infrastructure_Ops.md) - VPS、WordPress Multisite
-- [04. AIパイプライン](./architecture/04_AI_Pipeline.md) - 記事生成フロー、LLM戦略
-- [05. シーケンス図](./architecture/05_Sequence_Diagrams.md) - 処理フロー詳細
-- [06. Multisite検討](./architecture/06_Multisite_feasibility.md) - アーキテクチャ決定根拠
-- [07. Multisiteガイド](./architecture/07_WordPress_Multisite_Guide.md) - 実装詳細・セキュリティ設計
-- [08. 整合性リスクレポート](./architecture/08_Integration_Risk_Report.md) - 仕様間の整合性分析
-- [09. 致命的問題点レポート](./architecture/09_Critical_Issues_Report.md) - First Principles分析結果（10イテレーション）
-- [10. 包括的問題点レポート](./architecture/10_Comprehensive_Critical_Issues_Report.md) - First Principles分析結果（50イテレーション）
+- [00. マスターアーキテクチャ](./architecture/00_Master_Architecture.md)
+- [01. フロントエンド](./architecture/01_Frontend_Architecture.md)
+- [02. バックエンド・DB](./architecture/02_Backend_Database.md)
+- [03. インフラ・運用](./architecture/03_Infrastructure_Ops.md)
+- [04. AIパイプライン](./architecture/04_AI_Pipeline.md)
+- [05. シーケンス図](./architecture/05_Sequence_Diagrams.md)
 
-### 開発フェーズ詳細（Phases）
+### ストリーム別フェーズ詳細
+- [Stream M: Marketing](./phases/StreamM_Marketing.md) - マーケティング・発信
+- [Stream A: Article Generation](./phases/StreamA_ArticleGen.md) - 記事生成モジュール
+- [Stream W: WordPress Setup](./phases/StreamW_WordPress.md) - WordPressセットアップ
+- [Integration: MVP](./phases/Integration_MVP.md) - 統合・MVPリリース
 
-**MVP（1ヶ月）:**
-- [Phase 0: Mockup](./phases/Phase0_Mockup.md) - SNSデモ動画・コンセプト検証
-- [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md) - ロゴ・アイコン・正式LP
-- [Phase 1: Infrastructure + Auth](./phases/Phase1_Infrastructure.md) - インフラ基盤・認証
-- [Phase 2: Core AI](./phases/Phase2_CoreAI.md) - AIコア機能
-- [Phase 3: User Interface](./phases/Phase3_UserInterface.md) - ユーザーインターフェース
-- [Phase 4: Automation](./phases/Phase4_Automation.md) - スケジュール自動化（MVP必須）
-- [Phase 5: Monetization](./phases/Phase5_Monetization.md) - 収益化
-- [Phase 6: MVP Launch](./phases/Phase6_MVPLaunch.md) - MVPリリース
-- **Phase 6.1: UI Upgrade** (✅ 2026-01-27 完了) - リッチUIデザイン移植
+### 旧フェーズドキュメント（参照用）
+<details>
+<summary>Phase 0-15（旧構成）</summary>
 
-**成長フェーズ:**
-- [Phase 7: Visual](./phases/Phase7_Visual.md) - 画像自動生成
-- [Phase 8: Custom Domain](./phases/Phase8_CustomDomain.md) - 独自ドメイン
-- [Phase 9: SSO](./phases/Phase9_SSO.md) - シームレスログイン
-- [Phase 10: GSC Integration](./phases/Phase10_GSCIntegration.md) - Search Console連携
-- [Phase 11: Headless Evaluation](./phases/Phase11_HeadlessEvaluation.md) - Headless化評価
-- [Phase 12: Model Selection](./phases/Phase12_ModelSelection.md) - LLMモデル選択機能
-- [Phase 13: Brand Evolution](./phases/Phase13_BrandIdentity.md) - ブランド洗練・ガイドライン策定
-- [Phase 14: Referral Program](./phases/Phase14_ReferralProgram.md) - リファラルプログラム
-- [Phase 15: Prompt Intelligence](./phases/Phase15_PromptIntelligence.md) - プロンプト効果分析・A/Bテスト
+- [Phase 0: Mockup](./phases/Phase0_Mockup.md)
+- [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md)
+- [Phase 1: Infrastructure](./phases/Phase1_Infrastructure.md)
+- [Phase 2: Core AI](./phases/Phase2_CoreAI.md)
+- [Phase 3: User Interface](./phases/Phase3_UserInterface.md)
+- [Phase 4: Automation](./phases/Phase4_Automation.md)
+- [Phase 5: Monetization](./phases/Phase5_Monetization.md)
+- [Phase 6: MVP Launch](./phases/Phase6_MVPLaunch.md)
+- [Phase 7-15: Growth](./phases/)
+
+</details>
 
 ### コンセプト・決定事項
 - [CONCEPT_DECISIONS.md](./CONCEPT_DECISIONS.md) - 全技術選定・ビジネス決定の記録

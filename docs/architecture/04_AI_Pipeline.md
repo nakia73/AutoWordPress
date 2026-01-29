@@ -1,7 +1,7 @@
 # 04. AIパイプライン・ジョブシステム
 
 > **サービス名:** Argo Note
-> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [シーケンス図](./05_Sequence_Diagrams.md) | [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md)
+> **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [マスターアーキテクチャ](./00_Master_Architecture.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [シーケンス図](./05_Sequence_Diagrams.md) | [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md) | [Claude Batch API](./05_Claude_Batch_API.md)
 > **実装フェーズ:** [Phase 2: Core AI](../phases/Phase2_CoreAI.md), [Phase 4: Automation](../phases/Phase4_Automation.md), [Phase 7: Visual](../phases/Phase7_Visual.md), [Phase 10: GSC連携](../phases/Phase10_GSCIntegration.md), [Phase 15: Prompt Intelligence](../phases/Phase15_PromptIntelligence.md)
 
 ブログ記事の品質と継続性を担保するAI処理系の設計です。
@@ -47,6 +47,37 @@ Phase G          Phase F           Phase E
 - 差別化ポイント
 
 **MVP採用方式の決定プロセス:** AのURLクロールMockup と BのインタラクティブQ&A Mockup を作成し、XなどのSNSで映像を配信して反応を比較し、どちらが市場に求められているかを検証した上で採用方式を決定する。方式Cは本テスト対象外で、扱いは別途決定する。
+
+#### 入力パターン仕様（実装済み - Stream A）
+
+**実装ファイル:** `app/src/lib/ai/article-input-handler.ts`
+
+| モード | 説明 | 必須入力 |
+|--------|------|---------|
+| `site_url` | 製品/サービスのランディングページURL | url |
+| `article_url` | 参考にしたい記事のURL（構造・スタイルを模倣） | url |
+| `text` | ユーザーが直接情報を入力 | productName, productDescription, targetKeyword |
+| `hybrid` | 複数ソースを組み合わせ | いずれか1つ以上 |
+
+**正規化出力（NormalizedInput）:**
+```typescript
+type NormalizedInput = {
+  productName: string;
+  productDescription: string;
+  targetKeyword: string;
+  language: 'ja' | 'en';
+  siteContent?: string;
+  referenceArticle?: {
+    title: string;
+    structure: string[];
+    style: string;
+    wordCount: number;
+  };
+  additionalContext?: string;
+  inputMode: InputMode;
+  sourceUrls: string[];
+};
+```
 
 ---
 
@@ -160,9 +191,10 @@ Phase G          Phase F           Phase E
 
 2. **Writer（執筆）**
    - Input: 構成案 + 参照情報
-   - Tool: Gemini 3.0 Pro（ソフトコーディング）
+   - Tool: **Gemini 3 Flash**（ソフトコーディング）/ **Claude Batch API**（標準採用、50%コスト削減）
    - Output: 本文（HTML）、メタディスクリプション
    - **プロンプトテンプレートID記録**（Phase 15トレーサビリティ）
+   - **Claude API方針:** 1記事でも複数記事でも**常にBatch APIを使用**（ストリーミング/同期API不使用）（[仕様書](./05_Claude_Batch_API.md)）
 
 3. **Editor（推敲）**
    - Input: 初稿
@@ -171,8 +203,9 @@ Phase G          Phase F           Phase E
 
 4. **Illustrator（画像）** ※実装済み
    - Input: 記事タイトル・要約・セクション見出し
-   - Tool: NanoBanana Pro（gemini-3-pro-image-preview）
+   - Tool: **kie.ai NanoBanana Pro**（主要、$0.09/image）+ **Google公式API**（フォールバック、$0.134/image）
    - Output: アイキャッチ画像 + セクション別画像（H2/H3見出し直後に挿入）
+   - **コスト削減:** kie.ai使用で画像コスト33%削減
    - **実装ファイル:**
      - `lib/ai/image-generator.ts` - サムネイル・セクション画像生成
      - `lib/ai/section-image-service.ts` - HTML見出し抽出・画像挿入
@@ -236,8 +269,9 @@ Phase G          Phase F           Phase E
 
 4.  **Writer (執筆):**
     - **Input:** 構成案 + 参照情報
-    - **Tool:** **Gemini 3.0 Pro**（ソフトコーディング、ユーザー変更可）
+    - **Tool:** **Gemini 3 Flash**（ソフトコーディング、ユーザー変更可）/ **Claude Batch API**（標準採用、50%コスト削減）
     - **Output:** 本文（HTML）、メタディスクリプション
+    - **注意:** Claude使用時はストリーミング/同期APIではなく、**常にBatch APIを使用**
 
 5.  **Editor (推敲・校正):**
     - **Input:** 初稿
@@ -247,9 +281,9 @@ Phase G          Phase F           Phase E
 
 6.  **Illustrator (画像):** ※実装済み
     - **Input:** 記事タイトル・要約・セクション見出し
-    - **Tool:** **kie.ai Nano Banana Pro**（主要）+ **Google公式API**（フォールバック）
-    - **Output:** アイキャッチ画像 (URL) + セクション別画像（H2/H3見出し直後に挿入）
-    - **コスト最適化:** kie.ai使用で画像コスト33%削減（$0.09/image vs $0.134/image）
+    - **Tool:** **kie.ai NanoBanana Pro**（主要、$0.09/image）+ **Google公式API**（フォールバック、$0.134/image）
+    - **Output:** アイキャッチ画像（16:9）+ セクション別画像（H2見出し直後に挿入、最大5枚）
+    - **コスト最適化:** kie.ai使用で画像コスト33%削減
 
 ## LLMモデル戦略（確定）
 
@@ -258,14 +292,16 @@ LLMモデルは**ハードコードしてはならない**。環境変数また�
 
 **LiteLLMプロキシ**を使用し、モデル切り替えを容易化。
 
-- **Gemini 3.0 Pro（標準採用）:**
+- **Gemini 3 Flash（現行採用 - 2026年1月更新）:**
   - **役割:** 全フェーズのメインライター
-  - **選定理由:** 長文生成品質、日本語能力、コストパフォーマンス、高速応答
-  - **設定:** `LLM_MODEL=gemini-3.0-pro`
+  - **選定理由:** 高速応答、コストパフォーマンス、十分な品質
+  - **設定:** `LLM_MODEL=gemini-3-flash`
+  - **API ID:** `gemini-3-flash-preview`
 
 **モデル設定例（環境変数）:**
 ```env
-LLM_MODEL=gemini-3.0-pro
+GEMINI_API_KEY=AIza...
+LLM_MODEL=gemini-3-flash
 LLM_TIMEOUT_SECONDS=30
 LLM_MAX_RETRIES=3
 ```
@@ -335,15 +371,50 @@ researchForArticle(keyword, options): Promise<string>
 
 ---
 
+### Webスクレイパー
+
+**ファイル:** `app/src/lib/ai/web-scraper.ts`
+
+**機能:**
+- Jina Reader APIを使用したURL→Markdownコンテンツ抽出
+- 構造化された見出し抽出
+- 画像URL抽出
+- テスト: 14テスト
+
+**主要メソッド:**
+```typescript
+scrapeUrl(url: string): Promise<ScrapedContent>
+```
+
+---
+
+### 入力パターンハンドラー
+
+**ファイル:** `app/src/lib/ai/article-input-handler.ts`
+
+**機能:**
+- 4つの入力モード（site_url, article_url, text, hybrid）の統合処理
+- 入力の正規化（NormalizedInput）
+- URLスクレイピング→製品情報抽出→キーワード生成の自動化
+- テスト: 13テスト
+
+**主要メソッド:**
+```typescript
+processInput(input: ArticleInput): Promise<NormalizedInput>
+```
+
+---
+
 ### 画像生成サービス
 
 **ファイル:** `app/src/lib/ai/image-generator.ts`
 
 **機能:**
-- NanoBanana Pro（gemini-3-pro-image-preview）によるサムネイル生成
-- 日本語テロップ対応
+- **kie.ai NanoBanana Pro**（主要）によるサムネイル生成（$0.09/image）
+- **Google公式API**（フォールバック）（$0.134/image）
 - 参照画像によるスタイル維持機能
 - LLMによる最終プロンプト生成
+- テスト: 20テスト、カバレッジ98.55%
 
 **主要メソッド:**
 ```typescript
@@ -421,17 +492,20 @@ const result = await articleGenerator.generate({
 ### 環境変数
 
 ```env
-# LLM設定
-LLM_MODEL=gemini/gemini-2.0-flash-exp
-LITELLM_API_KEY=...
-LITELLM_BASE_URL=...
+# LLM設定（2026年1月更新）
+LLM_MODEL=gemini-3-flash          # デフォルト推奨（API ID: gemini-3-flash-preview）
+GEMINI_API_KEY=AIza...            # Google Gemini APIキー
+ANTHROPIC_API_KEY=sk-ant-...      # Anthropic Claude APIキー（オプション）
 
 # Tavily検索
-TAVILY_API_KEY=tvly-...
+TAVILY_API_KEY=tvly-...           # セマンティック検索用
 
-# 画像生成（kie.ai主要 + Google公式フォールバック）
-KIE_AI_API_KEY=...           # kie.ai Nano Banana Pro用（主要）
-GOOGLE_API_KEY=...           # Google公式API用（フォールバック）
+# 画像生成（kie.ai主要 + Gemini 3 Pro Imageフォールバック）
+KIE_AI_API_KEY=...                # kie.ai NanoBanana Pro用（主要、$0.09/image）
+GOOGLE_API_KEY=AIza...            # Gemini 3 Pro Image用（gemini-3-pro-image-preview）
+
+# Webスクレイピング（オプション）
+JINA_API_KEY=...                  # Jina Reader 拡張機能用
 ```
 
 ---
