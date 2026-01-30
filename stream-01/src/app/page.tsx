@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { generateArticleAction, type GenerationResult } from './actions';
-import { ModelSelector, parseModelId, LLM_MODEL_OPTIONS } from '@/components/article-gen/ModelSelector';
+import { ModelSelector, parseModelId, LLM_MODEL_OPTIONS } from '@/components/ModelSelector';
 import type { LogEntry } from '@/lib/ai/pipeline-logger';
 
 type ArticleType = 'article' | 'faq' | 'glossary';

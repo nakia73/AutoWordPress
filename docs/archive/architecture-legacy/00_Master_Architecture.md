@@ -1,5 +1,7 @@
 # 00. アーキテクチャ - マスタードキュメント
 
+> **上位ドキュメント:** [開発哲学 (DEVELOPMENT_PHILOSOPHY.md)](../DEVELOPMENT_PHILOSOPHY.md) - 本ドキュメントはこの思想に従う
+>
 > **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [コンセプト決定](../CONCEPT_DECISIONS.md) | [WordPress Multisiteガイド](./07_WordPress_Multisite_Guide.md) | [全フェーズ一覧](../phases/)
 
 ## 概要
@@ -17,6 +19,14 @@
 **MVP期限:** 2026年2月25日（1ヶ月）| **月額予算:** $100以内
 
 ## アーキテクチャ基本方針
+
+> **注:** 本方針は [開発哲学](../DEVELOPMENT_PHILOSOPHY.md) の **Service Per Pattern** に従う
+
+0.  **Service Per Pattern（モジュール分離）:**
+    - 各機能モジュール（Stream A, Stream W, Stream M）は**独立したプロダクト**として開発
+    - 本番フォルダ (`/app/`) とは別の独立ディレクトリで開発・テスト
+    - 統合は個別開発完了後の明確な統合フェーズでのみ実施
+    - 詳細は [開発哲学](../DEVELOPMENT_PHILOSOPHY.md) を参照
 
 1.  **疎結合と責務の分離 (Separation of Concerns):**
     - 管理画面・バックエンドAPI（アプリケーション層）と、実際にブログが稼働するWordPressサーバー（インフラ層）を明確に分離します。

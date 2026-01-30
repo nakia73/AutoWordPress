@@ -1,5 +1,7 @@
 # Stream A: Article Generation（記事生成モジュール）
 
+> **上位ドキュメント:** [開発哲学](../DEVELOPMENT_PHILOSOPHY.md) - 本モジュールはこの思想に従う
+>
 > **サービス名:** Argo Note
 > **関連ドキュメント:** [開発ロードマップ](../DEVELOPMENT_ROADMAP.md) | [AIパイプライン仕様](../architecture/04_AI_Pipeline.md) | [ファーストプリンシプル分析](../FIRST_PRINCIPLES_ARTICLE_GENERATION.md)
 > **詳細実装計画:** [StreamA_Implementation_Plan.md](./StreamA_Implementation_Plan.md)
@@ -7,10 +9,12 @@
 > **品質チェックリスト:** [StreamA_Quality_Checklist.md](./StreamA_Quality_Checklist.md)
 >
 > **依存関係:** なし（スタンドアローン）
-> **最終更新:** 2026-01-29 (イテレーション14) | **テスト状況:** 127/127 パス (+10 統合テスト)
+> **統合先:** `/app/src/lib/ai/`
+> **コードベース:** `/stream-a/`
+> **最終更新:** 2026-01-30
 
 **テーマ:** Intelligent Engine
-**目的:** AI記事生成エンジンをスタンドアローンで構築・検証
+**目的:** 統合を前提として、AI記事生成エンジンを単体で構築・テスト
 
 ---
 
