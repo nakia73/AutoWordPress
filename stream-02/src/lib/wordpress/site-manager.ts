@@ -1,5 +1,7 @@
 // Argo Note - Stream 02 Site Manager
 // サイト作成のビジネスロジック
+//
+// Stream02の責務: サブサイト作成・認証情報発行
 
 import { WPCLIClient } from '@/lib/vps/wp-cli';
 
@@ -12,7 +14,7 @@ export interface SiteCreateResult {
     url: string;
     credentials: {
       username: string;
-      password: string;
+      applicationPassword: string;  // Stream04での記事投稿に使用
     };
   };
   error?: {
@@ -83,7 +85,7 @@ export class SiteManager {
           url: createResult.url,
           credentials: {
             username: 'admin',
-            password: appPassword.password,
+            applicationPassword: appPassword.password,
           },
         },
       };

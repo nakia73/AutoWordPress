@@ -1,5 +1,8 @@
 // Argo Note - Stream 02 Article Publisher
 // 記事投稿のビジネスロジック
+//
+// Stream02の責務: WordPressへの記事投稿機能が動作することを検証
+// ※ 記事の内容はMockデータを使用（Stream01の出力は使用しない）
 
 import { WordPressClient, WordPressAPIError } from './client';
 

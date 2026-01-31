@@ -30,7 +30,7 @@ export async function testConnections() {
 
   // REST API Test
   try {
-    const domain = process.env.WP_DOMAIN || "argonote.app";
+    const domain = process.env.WP_DOMAIN || "example.com";
     results.rest.endpoint = `https://${domain}/wp-json`;
 
     // Simple endpoint check (no auth required)

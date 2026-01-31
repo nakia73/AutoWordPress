@@ -1,8 +1,11 @@
 "use client";
 
+// Stream02: WordPressセットアップ
+// テスト目的: サブサイト作成・認証情報発行ができるか
+
 import Link from "next/link";
 import { useState } from "react";
-import { createSite } from "./actions";
+import { setupSite } from "./actions";
 
 export default function SitePage() {
   const [slug, setSlug] = useState("");
@@ -17,7 +20,7 @@ export default function SitePage() {
     setResult(null);
 
     try {
-      const response = await createSite({ slug, title, email });
+      const response = await setupSite({ slug, title, email });
       setResult(JSON.stringify(response, null, 2));
     } catch (error) {
       setResult(
@@ -42,7 +45,7 @@ export default function SitePage() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Site Create Test</h1>
+          <h1 className="text-2xl font-bold">Site Setup Test</h1>
           <Link href="/" className="text-blue-600 hover:underline">
             ← Back
           </Link>
@@ -100,7 +103,7 @@ export default function SitePage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-3 rounded-lg mt-6 hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Site"}
+            {loading ? "Setting up..." : "Setup Site"}
           </button>
         </form>
 

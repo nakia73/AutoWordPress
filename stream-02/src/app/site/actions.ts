@@ -1,15 +1,18 @@
 "use server";
 
-import { WordPressManager } from "@/lib/wordpress";
+// Stream02: WordPressセットアップ
+// テスト目的: WordPressがセットアップできるか
 
-export async function createSite(input: {
+import { WordPressSetupManager } from "@/lib/wordpress";
+
+export async function setupSite(input: {
   slug: string;
   title: string;
   email: string;
 }) {
   try {
-    const manager = new WordPressManager();
-    return await manager.createSite(input);
+    const manager = new WordPressSetupManager();
+    return await manager.setupSite(input);
   } catch (error) {
     return {
       success: false,

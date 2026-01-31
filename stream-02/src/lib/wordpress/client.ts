@@ -1,5 +1,24 @@
 // Argo Note - Stream 02 WordPress REST API Client
 
+/**
+ * Sanitize a filename for use in Content-Disposition header.
+ * Removes characters that could enable header injection attacks.
+ *
+ * @param filename - The original filename
+ * @returns Sanitized filename safe for HTTP headers
+ */
+function sanitizeFilename(filename: string): string {
+  // Remove characters that could enable header injection
+  // - Double quotes: could break out of quoted string
+  // - Newlines (\n, \r): could inject new headers
+  // - Backslashes: could be used for escaping
+  // - Null bytes: could truncate strings in some contexts
+  return filename
+    .replace(/["\\]/g, '_')
+    .replace(/[\r\n\x00]/g, '')
+    .trim();
+}
+
 import type {
   WPPostRequest,
   WPPostResponse,
@@ -105,10 +124,13 @@ export class WordPressClient {
     const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
     const blob = new Blob([arrayBuffer], { type: mimeType });
 
+    // Sanitize filename to prevent header injection
+    const safeFilename = sanitizeFilename(filename);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `attachment; filename="${safeFilename}"`,
         'Content-Type': mimeType,
         Authorization: this.authHeader,
       },

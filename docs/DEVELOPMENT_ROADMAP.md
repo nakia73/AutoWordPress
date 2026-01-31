@@ -166,6 +166,9 @@ MVPリリース後、フィードバックに基づき優先順位を決定。
 | G-7 | Prompt Intelligence | プロンプト効果分析・A/Bテスト |
 | **G-8** | **Article Rewrite** | **記事リライト・自動更新システム** |
 | **G-9** | **Keyword Intelligence** | **キーワード分析・提案システム** |
+| G-10 | Multi-Site Dashboard | 複数WordPress一元管理ダッシュボード |
+| G-11 | Team Collaboration | チーム協業・承認フロー・ワークフロー |
+| G-12 | Advanced UI/UX | WordPress制約を超えたリッチUI |
 
 ---
 
@@ -240,6 +243,54 @@ MVPリリース後、フィードバックに基づき優先順位を決定。
 
 ---
 
+## 外部アプリ管理アーキテクチャ（Future Phase）
+
+本サービスは「外部SaaSアプリ + WordPress」構成を採用。
+以下の機能は将来的に実装予定。
+
+### アーキテクチャのメリット
+
+| メリット | 説明 |
+|---------|------|
+| **複数サイト一元管理** | 1つのダッシュボードで複数WordPressを管理可能 |
+| **高度なワークフロー** | スケジューリング、承認フロー、チーム協業が容易 |
+| **リッチなUI/UX** | WordPress管理画面の制約を受けない |
+| **処理負荷の分離** | AI処理はSaaS側、WordPressは公開のみ |
+| **セキュリティ** | WordPressにAPIキーを保存しない |
+
+### G-10: Multi-Site Dashboard（複数サイト一元管理）
+- **目的:** 複数のWordPressサイトを1つのダッシュボードで統合管理
+- **管理画面:** `/sites`
+- **内容:**
+  - 全サイトの記事一覧・ステータス統合表示
+  - サイト横断検索・フィルタリング
+  - 一括操作（記事公開、下書き保存、削除）
+  - サイト別パフォーマンス比較
+  - サイトグループ機能（プロジェクト単位で整理）
+
+### G-11: Team Collaboration（チーム協業・承認フロー）
+- **目的:** 複数人でのコンテンツ制作・承認ワークフロー
+- **管理画面:** `/team`, `/workflow`
+- **内容:**
+  - チームメンバー招待・権限管理（管理者/編集者/閲覧者）
+  - 記事承認フロー（下書き→レビュー→承認→公開）
+  - コメント・フィードバック機能
+  - 通知設定（Slack/Discord/Email連携）
+  - 監査ログ（誰が何をいつ変更したか）
+
+### G-12: Advanced UI/UX（リッチUI）
+- **目的:** WordPress管理画面の制約を超えた操作性
+- **管理画面:** 全体
+- **内容:**
+  - ドラッグ&ドロップによる記事並び替え
+  - リアルタイムプレビュー（編集しながら即座に確認）
+  - カスタムダッシュボードウィジェット
+  - ダークモード対応
+  - キーボードショートカット
+  - モバイル最適化
+
+---
+
 ## 開発進行の原則
 
 ### 1. スタンドアローン優先
@@ -294,33 +345,21 @@ MVPリリース後、フィードバックに基づき優先順位を決定。
 
 ## 関連ドキュメント
 
-### 技術仕様書（Architecture）
-- [00. マスターアーキテクチャ](./architecture/00_Master_Architecture.md)
-- [01. フロントエンド](./architecture/01_Frontend_Architecture.md)
-- [02. バックエンド・DB](./architecture/02_Backend_Database.md)
-- [03. インフラ・運用](./architecture/03_Infrastructure_Ops.md)
-- [04. AIパイプライン](./architecture/04_AI_Pipeline.md)
-- [05. シーケンス図](./architecture/05_Sequence_Diagrams.md)
+### ストリーム別ドキュメント
+- [Stream 01: Article Generation](../stream-01/docs/Stream01_ArticleGen.md) - 記事生成モジュール（完了）
+- [Stream 02: WordPress Setup](../stream-02/docs/Stream02_Spec.md) - WordPressセットアップ（開発中）
+- [Stream 12: LLM Selector](../stream-12/docs/Stream12_LLMSelector.md) - LLMセレクター（計画）
+- [Stream 13: Marketing](../stream-13/docs/Stream13_Marketing.md) - マーケティング・発信
 
-### ストリーム別フェーズ詳細
-- [Stream M: Marketing](./phases/StreamM_Marketing.md) - マーケティング・発信
-- [Stream A: Article Generation](./phases/StreamA_ArticleGen.md) - 記事生成モジュール
-- [Stream W: WordPress Setup](./phases/StreamW_WordPress.md) - WordPressセットアップ
-- [Integration: MVP](./phases/Integration_MVP.md) - 統合・MVPリリース
+### 技術仕様書
+- [Claude_Batch_API.md](./architecture/Claude_Batch_API.md) - Claude Batch API仕様
+- [VPS_Provider_Selection.md](./architecture/VPS_Provider_Selection.md) - VPSプロバイダー選定
 
-### 旧フェーズドキュメント（参照用）
+### アーカイブ（参照用）
 <details>
-<summary>Phase 0-15（旧構成）</summary>
+<summary>旧ドキュメント（archive/phases-legacy, archive/architecture-legacy）</summary>
 
-- [Phase 0: Mockup](./phases/Phase0_Mockup.md)
-- [Phase 0.5: MVP Branding](./phases/Phase0.5_MVPBranding.md)
-- [Phase 1: Infrastructure](./phases/Phase1_Infrastructure.md)
-- [Phase 2: Core AI](./phases/Phase2_CoreAI.md)
-- [Phase 3: User Interface](./phases/Phase3_UserInterface.md)
-- [Phase 4: Automation](./phases/Phase4_Automation.md)
-- [Phase 5: Monetization](./phases/Phase5_Monetization.md)
-- [Phase 6: MVP Launch](./phases/Phase6_MVPLaunch.md)
-- [Phase 7-15: Growth](./phases/)
+過去のPhase 0-15ドキュメントおよび旧アーキテクチャドキュメントは `docs/archive/` に移動しました。
 
 </details>
 

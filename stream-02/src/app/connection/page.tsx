@@ -18,6 +18,20 @@ type ConnectionStatus = {
   };
 };
 
+function StatusIndicator({
+  status,
+}: {
+  status: "idle" | "testing" | "success" | "error";
+}) {
+  const colors = {
+    idle: "bg-gray-300",
+    testing: "bg-yellow-400 animate-pulse",
+    success: "bg-green-500",
+    error: "bg-red-500",
+  };
+  return <span className={`inline-block w-3 h-3 rounded-full ${colors[status]}`} />;
+}
+
 export default function ConnectionPage() {
   const [connections, setConnections] = useState<ConnectionStatus>({
     ssh: { status: "idle" },
@@ -47,7 +61,7 @@ export default function ConnectionPage() {
           ? { status: "success", endpoint: results.rest.endpoint }
           : { status: "error", message: results.rest.error },
       });
-    } catch (error) {
+    } catch {
       setConnections({
         ssh: { status: "error", message: "Test failed" },
         wpcli: { status: "error", message: "Test failed" },
@@ -56,20 +70,6 @@ export default function ConnectionPage() {
     }
 
     setTesting(false);
-  };
-
-  const StatusIndicator = ({
-    status,
-  }: {
-    status: "idle" | "testing" | "success" | "error";
-  }) => {
-    const colors = {
-      idle: "bg-gray-300",
-      testing: "bg-yellow-400 animate-pulse",
-      success: "bg-green-500",
-      error: "bg-red-500",
-    };
-    return <span className={`inline-block w-3 h-3 rounded-full ${colors[status]}`} />;
   };
 
   return (

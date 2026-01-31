@@ -16,112 +16,76 @@
 
 ---
 
-## このリポジトリについて
-
-このリポジトリは **Argo Note** のプロダクト仕様を定義・管理するためのドキュメントプロジェクトです。
-
-### 目的
-
-- プロダクトの設計・仕様を明確化
-- 技術的な意思決定を記録
-- 開発フェーズの計画を管理
-
-### 注意事項
-
-**このリポジトリは仕様定義のみを目的としています。実装コードは含まれません。**
-
----
-
-## ドキュメント構成
+## リポジトリ構造
 
 ```
-docs/
+Autoblog/
 │
-├── README.md                          # 本ドキュメント（インデックス）
-│
-├─────────────────────────────────────────────────────────────────
-│  【最上位設計思想】
-├─────────────────────────────────────────────────────────────────
-├── DEVELOPMENT_PHILOSOPHY.md          # 開発哲学（最上位・全文書はこれに従う）
-│   └── Service Per Pattern、スタンドアロン開発、Web UI目視確認
-├── STREAM_OVERVIEW.md                 # 全ストリーム一覧と開発計画
-│   └── Stream 01-13 の概要と優先順位
-│
-├─────────────────────────────────────────────────────────────────
-│  【コア設計ドキュメント】
-├─────────────────────────────────────────────────────────────────
-├── CONCEPT_DECISIONS.md               # 全決定事項の記録（マスター）
-├── DEVELOPMENT_ROADMAP.md             # 開発ロードマップ
-├── TASK_MANAGEMENT.md                 # タスク管理
-├── USER_INPUT_LOG.md                  # ユーザー入力ログ（原文保存）
-│
-├─────────────────────────────────────────────────────────────────
-│  【記事生成・AI戦略】
-├─────────────────────────────────────────────────────────────────
-├── FIRST_PRINCIPLES_ARTICLE_GENERATION.md   # ファーストプリンシプル分析 + 実装仕様
-│   └── 5つの飛躍的アイデア（Soul Injection, Living Article, Thought Map, Vibe Writing, Transparency）
-├── WORDPRESS_BLOG_CONSIDERATIONS.md         # WordPressブログ検討事項
-│
-├─────────────────────────────────────────────────────────────────
-│  【コード統合記録】(Rapid-Note2からの移植)
-├─────────────────────────────────────────────────────────────────
-├── RAPID_NOTE_INTEGRATION_TASKS.md    # 統合タスク一覧（完了）
-├── RAPID_NOTE_INTEGRATION_SUMMARY.md  # 統合完了レポート
-│
-├─────────────────────────────────────────────────────────────────
-│  【技術仕様書】architecture/
-├─────────────────────────────────────────────────────────────────
-├── architecture/
-│   ├── Stream01_Specification.md      # Stream 01 記事生成モジュール完全仕様書
-│   ├── Stream02_Multisite_Feasibility.md  # Stream 02 Multisite採用検討
-│   ├── Stream02_Multisite_Guide.md    # Stream 02 Multisite実装ガイド
-│   ├── Claude_Batch_API.md            # Claude Batch API仕様
-│   └── VPS_Provider_Selection.md      # VPSプロバイダー選定
-│
-├─────────────────────────────────────────────────────────────────
-│  【ストリームドキュメント】phases/
-├─────────────────────────────────────────────────────────────────
-├── phases/
+├── docs/                     # プロダクト仕様・設計ドキュメント
+│   ├── README.md             # 本ドキュメント（インデックス）
 │   │
-│   │  ── Stream 01: Article Generation ──
-│   ├── Stream01_ArticleGen.md         # 記事生成モジュール仕様
-│   ├── Stream01_Implementation_Plan.md    # 実装計画
-│   ├── Stream01_Implementation_Report.md  # 実装レポート
-│   ├── Stream01_E2E_Test_Plan.md      # E2Eテスト計画
-│   ├── Stream01_Quality_Checklist.md  # 品質チェックリスト
+│   │  【最上位設計思想】
+│   ├── DEVELOPMENT_PHILOSOPHY.md     # 開発哲学（最上位）
+│   ├── STREAM_OVERVIEW.md            # 全ストリーム一覧と開発計画
 │   │
-│   │  ── Stream 02: WordPress Setup ──
-│   ├── Stream02_WordPress.md          # WordPress セットアップ仕様
-│   ├── Stream02_MVP.md                # MVP要件
-│   ├── Stream02_MVP_Tasks.md          # MVPタスク一覧
+│   │  【コア設計】
+│   ├── CONCEPT_DECISIONS.md          # 全決定事項の記録
+│   ├── DEVELOPMENT_ROADMAP.md        # 開発ロードマップ
+│   ├── TASK_MANAGEMENT.md            # タスク管理
 │   │
-│   │  ── Stream 12: LLM Selector ──
-│   ├── Stream12_LLMSelector.md        # LLMセレクター仕様
+│   │  【AI戦略】
+│   ├── FIRST_PRINCIPLES_ARTICLE_GENERATION.md  # 記事生成のファーストプリンシプル
+│   ├── WORDPRESS_BLOG_CONSIDERATIONS.md        # WordPress運用検討
 │   │
-│   │  ── Stream 13: Marketing ──
-│   ├── Stream13_Marketing.md          # マーケティング仕様
+│   │  【共通技術仕様】
+│   ├── architecture/
+│   │   ├── Claude_Batch_API.md       # Claude Batch API仕様
+│   │   └── VPS_Provider_Selection.md # VPSプロバイダー選定
 │   │
-│   │  ── 旧Phaseドキュメント（参考用）──
-│   ├── Phase0_Mockup.md               # モックアップ・コンセプト検証
-│   ├── Phase0.5_MVPBranding.md        # MVP用ブランディング
-│   ├── Phase1_Infrastructure.md       # インフラ + 認証
-│   ├── Phase2_CoreAI.md               # AIコア機能
-│   └── ...
+│   │  【ビジネス】
+│   ├── business/
+│   │   └── Cost_Revenue_Analysis.md  # コスト・収益分析
+│   │
+│   │  【アーカイブ】
+│   └── archive/
+│       ├── phases-legacy/            # 旧Phaseドキュメント
+│       ├── architecture-legacy/      # 旧アーキテクチャドキュメント
+│       └── Rapid-Note2/              # 統合済みコードベース
 │
-├─────────────────────────────────────────────────────────────────
-│  【アーカイブ】archive/
-├─────────────────────────────────────────────────────────────────
-├── archive/
-│   └── architecture-legacy/           # 旧アーキテクチャドキュメント
-│       ├── 00_Master_Architecture.md
-│       ├── 01_Frontend_Architecture.md
-│       └── ...
+├── app/                      # 統合本番アプリケーション
 │
-├─────────────────────────────────────────────────────────────────
-│  【ビジネス分析】business/
-├─────────────────────────────────────────────────────────────────
-└── business/
-    └── Cost_Revenue_Analysis.md       # コスト・収益分析レポート
+├── stream-01/                # Stream 01: Article Generation ✅ 完了
+│   ├── docs/                 # Stream固有のドキュメント
+│   │   ├── Stream01_ArticleGen.md
+│   │   ├── Stream01_Specification.md
+│   │   ├── Stream01_Implementation_Plan.md
+│   │   ├── Stream01_Implementation_Report.md
+│   │   ├── Stream01_E2E_Test_Plan.md
+│   │   └── Stream01_Quality_Checklist.md
+│   └── src/                  # アプリケーションコード
+│
+├── stream-02/                # Stream 02: WordPress Setup 🔄 開発中
+│   ├── docs/                 # Stream固有のドキュメント
+│   │   ├── Stream02_Spec.md
+│   │   ├── Stream02_Tasks.md
+│   │   ├── Stream02_WordPress.md
+│   │   ├── Stream02_WPAgent_Spec.md
+│   │   ├── Stream02_Multisite_Feasibility.md
+│   │   └── Stream02_Multisite_Guide.md
+│   └── src/                  # アプリケーションコード
+│
+├── stream-12/                # Stream 12: LLM Selector 📋 計画
+│   └── docs/
+│       └── Stream12_LLMSelector.md
+│
+├── stream-13/                # Stream 13: Marketing 📋 継続
+│   ├── docs/
+│   │   └── Stream13_Marketing.md
+│   └── mockup/               # UIモックアップ
+│
+└── tools/                    # 開発ツール
+    ├── demo-ralph-project/
+    └── ralph-claude-code/
 ```
 
 ---
@@ -141,18 +105,15 @@ docs/
 
 | ストリーム | メインドキュメント | 状態 |
 |-----------|------------------|------|
-| **Stream 01** | [Stream01_ArticleGen.md](./phases/Stream01_ArticleGen.md) | ✅ 完了 |
-| **Stream 02** | [Stream02_WordPress.md](./phases/Stream02_WordPress.md) | ✅ 分離完了 |
-| **Stream 12** | [Stream12_LLMSelector.md](./phases/Stream12_LLMSelector.md) | 📋 計画 |
-| **Stream 13** | [Stream13_Marketing.md](./phases/Stream13_Marketing.md) | 📋 継続 |
+| **Stream 01** | [Stream01_ArticleGen.md](../stream-01/docs/Stream01_ArticleGen.md) | ✅ 完了 |
+| **Stream 02** | [Stream02_Spec.md](../stream-02/docs/Stream02_Spec.md) | 🔄 開発中 |
+| **Stream 12** | [Stream12_LLMSelector.md](../stream-12/docs/Stream12_LLMSelector.md) | 📋 計画 |
+| **Stream 13** | [Stream13_Marketing.md](../stream-13/docs/Stream13_Marketing.md) | 📋 継続 |
 
-### 技術仕様書
+### 共通技術仕様書
 
 | ドキュメント | 内容 |
 |-------------|------|
-| [Stream01_Specification.md](./architecture/Stream01_Specification.md) | Stream 01 記事生成モジュール完全仕様書 |
-| [Stream02_Multisite_Feasibility.md](./architecture/Stream02_Multisite_Feasibility.md) | Multisite採用検討 |
-| [Stream02_Multisite_Guide.md](./architecture/Stream02_Multisite_Guide.md) | Multisite実装ガイド |
 | [Claude_Batch_API.md](./architecture/Claude_Batch_API.md) | Claude Batch API仕様 |
 | [VPS_Provider_Selection.md](./architecture/VPS_Provider_Selection.md) | VPSプロバイダー選定 |
 
@@ -160,10 +121,8 @@ docs/
 
 | ドキュメント | 内容 |
 |-------------|------|
-| [FIRST_PRINCIPLES_ARTICLE_GENERATION.md](./FIRST_PRINCIPLES_ARTICLE_GENERATION.md) | 記事生成のファーストプリンシプル分析 + 飛躍的アイデア実装仕様 |
+| [FIRST_PRINCIPLES_ARTICLE_GENERATION.md](./FIRST_PRINCIPLES_ARTICLE_GENERATION.md) | 記事生成のファーストプリンシプル分析 |
 | [WORDPRESS_BLOG_CONSIDERATIONS.md](./WORDPRESS_BLOG_CONSIDERATIONS.md) | WordPressブログ運用の検討事項 |
-| [RAPID_NOTE_INTEGRATION_TASKS.md](./RAPID_NOTE_INTEGRATION_TASKS.md) | Rapid-Note2コード統合タスク一覧 |
-| [RAPID_NOTE_INTEGRATION_SUMMARY.md](./RAPID_NOTE_INTEGRATION_SUMMARY.md) | 統合完了レポート |
 
 ### ビジネス分析
 
@@ -171,18 +130,13 @@ docs/
 |-------------|------|
 | [Cost_Revenue_Analysis.md](./business/Cost_Revenue_Analysis.md) | コスト・収益分析、損益分岐点 |
 
-### タスク管理
-
-- [TASK_MANAGEMENT.md](./TASK_MANAGEMENT.md) - 進行中・完了タスクの管理
-- [USER_INPUT_LOG.md](./USER_INPUT_LOG.md) - ユーザー入力の原文保存
-
 ---
 
 ## ドキュメント関連図
 
 ```
                             ┌─────────────────────┐
-                            │      README.md      │
+                            │   docs/README.md    │
                             │    (インデックス)    │
                             └──────────┬──────────┘
                                        │
@@ -201,13 +155,15 @@ docs/
           │                            │                            │
           ▼                            ▼                            ▼
   ┌───────────────┐          ┌─────────────────┐          ┌─────────────────┐
-  │ Stream01_*    │          │ Stream02_*      │          │ Stream12/13_*   │
+  │ stream-01/    │          │ stream-02/      │          │ stream-12,13/   │
+  │ docs/         │          │ docs/           │          │ docs/           │
   │ (記事生成)    │          │ (WordPress)     │          │ (LLM/Marketing) │
   └───────────────┘          └─────────────────┘          └─────────────────┘
 ```
 
 **凡例:**
-- 親子関係: 上位ドキュメントから下位ドキュメントへリンク
+- 各Streamのドキュメントはそれぞれのディレクトリ配下に格納
+- 共通仕様は `docs/architecture/` に配置
 
 ---
 
